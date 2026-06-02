@@ -35,10 +35,10 @@ class TicTacToeModel {
   int? lastCol;
 
   TicTacToeModel({required this.size})
-      : winLength = winLengthFor(size),
-        _board = List.generate(size, (_) => List.filled(size, null)),
-        current = TicTacToePlayer.x,
-        state = const TicTacToePlaying();
+    : winLength = winLengthFor(size),
+      _board = List.generate(size, (_) => List.filled(size, null)),
+      current = TicTacToePlayer.x,
+      state = const TicTacToePlaying();
 
   List<UnmodifiableListView<TicTacToePlayer?>> get board =>
       _board.map(UnmodifiableListView<TicTacToePlayer?>.new).toList();
@@ -87,7 +87,10 @@ class TicTacToeModel {
     for (final d in dirs) {
       int count = 1;
       int r = row + d.$1, c = col + d.$2;
-      while (r >= 0 && c >= 0 && r < size && c < size &&
+      while (r >= 0 &&
+          c >= 0 &&
+          r < size &&
+          c < size &&
           _board[r][c] == player) {
         count++;
         r += d.$1;
@@ -95,7 +98,10 @@ class TicTacToeModel {
       }
       r = row - d.$1;
       c = col - d.$2;
-      while (r >= 0 && c >= 0 && r < size && c < size &&
+      while (r >= 0 &&
+          c >= 0 &&
+          r < size &&
+          c < size &&
           _board[r][c] == player) {
         count++;
         r -= d.$1;
@@ -164,15 +170,13 @@ class TicTacToeModel {
   // ── Serialisation ─────────────────────────────────────────────────────────
 
   Map<String, dynamic> toJson() => {
-        'size': size,
-        'board': _board
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'current': current.index,
-        'state': _stateToJson(state),
-        'lastRow': lastRow,
-        'lastCol': lastCol,
-      };
+    'size': size,
+    'board': _board.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'current': current.index,
+    'state': _stateToJson(state),
+    'lastRow': lastRow,
+    'lastCol': lastCol,
+  };
 
   static Map<String, dynamic> _stateToJson(TicTacToeState s) {
     if (s is TicTacToeWin) return {'type': 'win', 'winner': s.winner.index};
@@ -187,8 +191,9 @@ class TicTacToeModel {
     for (int r = 0; r < size; r++) {
       final row = board[r] as List;
       for (int c = 0; c < size; c++) {
-        model._board[r][c] =
-            row[c] == null ? null : TicTacToePlayer.values[row[c] as int];
+        model._board[r][c] = row[c] == null
+            ? null
+            : TicTacToePlayer.values[row[c] as int];
       }
     }
     model.current = TicTacToePlayer.values[json['current'] as int];

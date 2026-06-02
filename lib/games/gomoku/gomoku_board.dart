@@ -165,7 +165,9 @@ class _GomokuBoardState extends State<GomokuBoard> {
   }
 
   (int, int) _bestMoveHard(
-      List<List<GomokuPlayer?>> board, List<(int, int)> empty) {
+    List<List<GomokuPlayer?>> board,
+    List<(int, int)> empty,
+  ) {
     // Restrict candidates to cells within distance 2 of existing stones
     final candidates = empty.where((pos) {
       for (int dr = -2; dr <= 2; dr++) {
@@ -216,8 +218,12 @@ class _GomokuBoardState extends State<GomokuBoard> {
   /// Scores placing at [pos] in [dir] for [player].
   /// Counts run length and whether each end is open, closed (blocked by
   /// opponent), or wall (edge of board). Open ends multiply the threat value.
-  int _directionScore(List<List<GomokuPlayer?>> board, (int, int) pos,
-      (int, int) dir, GomokuPlayer player) {
+  int _directionScore(
+    List<List<GomokuPlayer?>> board,
+    (int, int) pos,
+    (int, int) dir,
+    GomokuPlayer player,
+  ) {
     int count = 1; // the cell itself
     int openEnds = 0;
 
@@ -267,10 +273,30 @@ class _GomokuBoardState extends State<GomokuBoard> {
 
     // Score by run length × open-end multiplier
     return switch (count) {
-      4 => openEnds == 2 ? 50000 : openEnds == 1 ? 10000 : 100,
-      3 => openEnds == 2 ? 5000 : openEnds == 1 ? 1000 : 50,
-      2 => openEnds == 2 ? 500 : openEnds == 1 ? 100 : 10,
-      1 => openEnds == 2 ? 50 : openEnds == 1 ? 10 : 1,
+      4 =>
+        openEnds == 2
+            ? 50000
+            : openEnds == 1
+            ? 10000
+            : 100,
+      3 =>
+        openEnds == 2
+            ? 5000
+            : openEnds == 1
+            ? 1000
+            : 50,
+      2 =>
+        openEnds == 2
+            ? 500
+            : openEnds == 1
+            ? 100
+            : 10,
+      1 =>
+        openEnds == 2
+            ? 50
+            : openEnds == 1
+            ? 10
+            : 1,
       _ => 0,
     };
   }
@@ -335,37 +361,37 @@ class _GomokuBoardState extends State<GomokuBoard> {
               aspectRatio: 1,
               child: Container(
                 margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFE8C876), Color(0xFFD4A44C)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF8B6914), width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE8C876), Color(0xFFD4A44C)],
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: LayoutBuilder(
-                  builder: (ctx, constraints) => GestureDetector(
-                    onTapDown: (d) => _handleTap(constraints, d),
-                    child: CustomPaint(
-                      painter: _GomokuPainter(_game, _lastMove),
-                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF8B6914), width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: LayoutBuilder(
+                    builder: (ctx, constraints) => GestureDetector(
+                      onTapDown: (d) => _handleTap(constraints, d),
+                      child: CustomPaint(
+                        painter: _GomokuPainter(_game, _lastMove),
+                        size: Size(constraints.maxWidth, constraints.maxHeight),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
         ),
       ],
     );
@@ -377,9 +403,15 @@ class _GomokuPainter extends CustomPainter {
   final (int, int)? lastMove;
 
   static const _starPoints = [
-    (3, 3), (3, 7), (3, 11),
-    (7, 3), (7, 7), (7, 11),
-    (11, 3), (11, 7), (11, 11),
+    (3, 3),
+    (3, 7),
+    (3, 11),
+    (7, 3),
+    (7, 7),
+    (7, 11),
+    (11, 3),
+    (11, 7),
+    (11, 11),
   ];
 
   const _GomokuPainter(this.game, this.lastMove);
@@ -397,9 +429,15 @@ class _GomokuPainter extends CustomPainter {
       ..strokeWidth = 0.8;
     for (int i = 0; i < n; i++) {
       canvas.drawLine(
-          Offset(0, i * rowCellSize), Offset(size.width, i * rowCellSize), gridPaint);
+        Offset(0, i * rowCellSize),
+        Offset(size.width, i * rowCellSize),
+        gridPaint,
+      );
       canvas.drawLine(
-          Offset(i * colCellSize, 0), Offset(i * colCellSize, size.height), gridPaint);
+        Offset(i * colCellSize, 0),
+        Offset(i * colCellSize, size.height),
+        gridPaint,
+      );
     }
 
     // Star points (traditional 15×15 positions)
@@ -408,7 +446,10 @@ class _GomokuPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     for (final pt in _starPoints) {
       canvas.drawCircle(
-          Offset(pt.$2 * colCellSize, pt.$1 * rowCellSize), 3.5, starPaint);
+        Offset(pt.$2 * colCellSize, pt.$1 * rowCellSize),
+        3.5,
+        starPaint,
+      );
     }
 
     // Stones
@@ -416,15 +457,24 @@ class _GomokuPainter extends CustomPainter {
       for (int c = 0; c < n; c++) {
         final piece = game.board[r][c];
         if (piece == null) continue;
-        _drawStone(canvas, Offset(c * colCellSize, r * rowCellSize), stoneR, piece,
-            isLast: lastMove == (r, c));
+        _drawStone(
+          canvas,
+          Offset(c * colCellSize, r * rowCellSize),
+          stoneR,
+          piece,
+          isLast: lastMove == (r, c),
+        );
       }
     }
   }
 
   void _drawStone(
-      Canvas canvas, Offset center, double radius, GomokuPlayer player,
-      {bool isLast = false}) {
+    Canvas canvas,
+    Offset center,
+    double radius,
+    GomokuPlayer player, {
+    bool isLast = false,
+  }) {
     // Shadow (drawn first, behind the stone)
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.35)
@@ -445,8 +495,9 @@ class _GomokuPainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..shader =
-            gradient.createShader(Rect.fromCircle(center: center, radius: radius)),
+        ..shader = gradient.createShader(
+          Rect.fromCircle(center: center, radius: radius),
+        ),
     );
 
     // Border ring

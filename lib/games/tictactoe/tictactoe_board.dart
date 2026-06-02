@@ -125,9 +125,7 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
 
   void _playAiMove() {
     if (!mounted) return;
-    final board = _game.board
-        .map(List<TicTacToePlayer?>.from)
-        .toList();
+    final board = _game.board.map(List<TicTacToePlayer?>.from).toList();
     final empty = _game.emptyCells;
     if (empty.isEmpty) return;
 
@@ -152,8 +150,13 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
           _ => 4,
         };
         pick = _bestMove(
-            board, widget.boardSize, _game.winLength,
-            TicTacToePlayer.o, maxDepth, _rng);
+          board,
+          widget.boardSize,
+          _game.winLength,
+          TicTacToePlayer.o,
+          maxDepth,
+          _rng,
+        );
     }
 
     setState(() {
@@ -168,13 +171,21 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
 
   /// Wins immediately if possible, else blocks opponent's immediate win, else random.
   (int, int) _smartMove(
-      List<List<TicTacToePlayer?>> board, List<(int, int)> empty) {
+    List<List<TicTacToePlayer?>> board,
+    List<(int, int)> empty,
+  ) {
     // Try to win
     for (final cell in empty) {
       final tempBoard = board.map(List<TicTacToePlayer?>.from).toList();
       tempBoard[cell.$1][cell.$2] = TicTacToePlayer.o;
-      if (_wouldWin(tempBoard, cell.$1, cell.$2, TicTacToePlayer.o,
-          widget.boardSize, _game.winLength)) {
+      if (_wouldWin(
+        tempBoard,
+        cell.$1,
+        cell.$2,
+        TicTacToePlayer.o,
+        widget.boardSize,
+        _game.winLength,
+      )) {
         return cell;
       }
     }
@@ -182,8 +193,14 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
     for (final cell in empty) {
       final tempBoard = board.map(List<TicTacToePlayer?>.from).toList();
       tempBoard[cell.$1][cell.$2] = TicTacToePlayer.x;
-      if (_wouldWin(tempBoard, cell.$1, cell.$2, TicTacToePlayer.x,
-          widget.boardSize, _game.winLength)) {
+      if (_wouldWin(
+        tempBoard,
+        cell.$1,
+        cell.$2,
+        TicTacToePlayer.x,
+        widget.boardSize,
+        _game.winLength,
+      )) {
         return cell;
       }
     }
@@ -218,9 +235,7 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
         GameStatusBar(
           player1: PlayerInfo(label: 'X', color: colorScheme.primary),
           player2: PlayerInfo(label: 'O', color: colorScheme.tertiary),
-          activePlayer: _game.state is TicTacToePlaying
-              ? (isXTurn ? 1 : 2)
-              : 0,
+          activePlayer: _game.state is TicTacToePlaying ? (isXTurn ? 1 : 2) : 0,
           message: _overrideMessage,
         ),
         Expanded(
@@ -233,7 +248,9 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
                   color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: colorScheme.outlineVariant, width: 2),
+                    color: colorScheme.outlineVariant,
+                    width: 2,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.1),
@@ -365,13 +382,15 @@ class _SymbolPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke;
       canvas.drawLine(
-          Offset(padding, padding),
-          Offset(size.width - padding, size.height - padding),
-          paint);
+        Offset(padding, padding),
+        Offset(size.width - padding, size.height - padding),
+        paint,
+      );
       canvas.drawLine(
-          Offset(size.width - padding, padding),
-          Offset(padding, size.height - padding),
-          paint);
+        Offset(size.width - padding, padding),
+        Offset(padding, size.height - padding),
+        paint,
+      );
     } else {
       final paint = Paint()
         ..color = tertiaryColor
@@ -389,22 +408,26 @@ class _SymbolPainter extends CustomPainter {
 
 // ── AI top-level functions ────────────────────────────────────────────────────
 
-bool _wouldWin(List<List<TicTacToePlayer?>> board, int row, int col,
-    TicTacToePlayer player, int size, int winLength) {
+bool _wouldWin(
+  List<List<TicTacToePlayer?>> board,
+  int row,
+  int col,
+  TicTacToePlayer player,
+  int size,
+  int winLength,
+) {
   const dirs = [(0, 1), (1, 0), (1, 1), (1, -1)];
   for (final d in dirs) {
     int count = 1;
     int r = row + d.$1, c = col + d.$2;
-    while (r >= 0 && c >= 0 && r < size && c < size &&
-        board[r][c] == player) {
+    while (r >= 0 && c >= 0 && r < size && c < size && board[r][c] == player) {
       count++;
       r += d.$1;
       c += d.$2;
     }
     r = row - d.$1;
     c = col - d.$2;
-    while (r >= 0 && c >= 0 && r < size && c < size &&
-        board[r][c] == player) {
+    while (r >= 0 && c >= 0 && r < size && c < size && board[r][c] == player) {
       count++;
       r -= d.$1;
       c -= d.$2;
@@ -423,8 +446,12 @@ bool _isBoardFull(List<List<TicTacToePlayer?>> board, int size) {
   return true;
 }
 
-int _evaluateBoard(List<List<TicTacToePlayer?>> board, int size,
-    int winLength, TicTacToePlayer forPlayer) {
+int _evaluateBoard(
+  List<List<TicTacToePlayer?>> board,
+  int size,
+  int winLength,
+  TicTacToePlayer forPlayer,
+) {
   final opponent = forPlayer == TicTacToePlayer.x
       ? TicTacToePlayer.o
       : TicTacToePlayer.x;
@@ -467,8 +494,7 @@ int _evaluateBoard(List<List<TicTacToePlayer?>> board, int size,
   return score;
 }
 
-List<(int, int)> _orderedEmpty(
-    List<List<TicTacToePlayer?>> board, int size) {
+List<(int, int)> _orderedEmpty(List<List<TicTacToePlayer?>> board, int size) {
   final mid = size ~/ 2;
   final cells = <(int, int)>[];
   if (board[mid][mid] == null) cells.add((mid, mid));
@@ -506,15 +532,22 @@ int _alphabeta(
       board[cell.$1][cell.$2] = currentPlayer;
       if (_wouldWin(board, cell.$1, cell.$2, currentPlayer, size, winLength)) {
         board[cell.$1][cell.$2] = null;
-        return currentPlayer == aiPlayer
-            ? 100000 + depth
-            : -(100000 + depth);
+        return currentPlayer == aiPlayer ? 100000 + depth : -(100000 + depth);
       }
       final next = currentPlayer == TicTacToePlayer.x
           ? TicTacToePlayer.o
           : TicTacToePlayer.x;
-      final score = _alphabeta(board, size, winLength, next, aiPlayer,
-          depth - 1, false, alpha, beta);
+      final score = _alphabeta(
+        board,
+        size,
+        winLength,
+        next,
+        aiPlayer,
+        depth - 1,
+        false,
+        alpha,
+        beta,
+      );
       board[cell.$1][cell.$2] = null;
       best = max(best, score);
       alpha = max(alpha, best);
@@ -527,15 +560,22 @@ int _alphabeta(
       board[cell.$1][cell.$2] = currentPlayer;
       if (_wouldWin(board, cell.$1, cell.$2, currentPlayer, size, winLength)) {
         board[cell.$1][cell.$2] = null;
-        return currentPlayer == aiPlayer
-            ? 100000 + depth
-            : -(100000 + depth);
+        return currentPlayer == aiPlayer ? 100000 + depth : -(100000 + depth);
       }
       final next = currentPlayer == TicTacToePlayer.x
           ? TicTacToePlayer.o
           : TicTacToePlayer.x;
-      final score = _alphabeta(board, size, winLength, next, aiPlayer,
-          depth - 1, true, alpha, beta);
+      final score = _alphabeta(
+        board,
+        size,
+        winLength,
+        next,
+        aiPlayer,
+        depth - 1,
+        true,
+        alpha,
+        beta,
+      );
       board[cell.$1][cell.$2] = null;
       best = min(best, score);
       beta = min(beta, best);
@@ -587,8 +627,17 @@ int _alphabeta(
 
   for (final cell in cells) {
     board[cell.$1][cell.$2] = aiPlayer;
-    final score = _alphabeta(board, size, winLength, next, aiPlayer,
-        maxDepth - 1, false, -1000002, 1000002);
+    final score = _alphabeta(
+      board,
+      size,
+      winLength,
+      next,
+      aiPlayer,
+      maxDepth - 1,
+      false,
+      -1000002,
+      1000002,
+    );
     board[cell.$1][cell.$2] = null;
     if (score > bestScore) {
       bestScore = score;

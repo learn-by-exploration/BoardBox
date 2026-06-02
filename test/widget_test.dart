@@ -5,7 +5,7 @@ void main() {
   testWidgets('App renders splash then navigates to home', (tester) async {
     await tester.pumpWidget(const CommonGamesApp());
     // Splash screen shows app name immediately.
-    expect(find.text('Common Games'), findsOneWidget);
+    expect(find.text('Board Box'), findsOneWidget);
 
     // After the splash delay + transition, we land on home screen.
     await tester.pumpAndSettle(const Duration(seconds: 3));

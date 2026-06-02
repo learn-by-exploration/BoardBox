@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/games/dots_and_boxes/dots_model.dart';
 import 'package:common_games/models/game_mode.dart';
+import 'package:common_games/services/settings_service.dart';
 import 'package:common_games/widgets/game_status_bar.dart';
 
 class DotsBoard extends StatefulWidget {
@@ -66,11 +67,13 @@ class _DotsBoardState extends State<DotsBoard> {
   void _scheduleAiMove() {
     if (!_isAiTurn) return;
     setState(() => _aiThinking = true);
-    final delay = switch (widget.difficulty) {
-      AiDifficulty.easy => 700,
-      AiDifficulty.medium => 500,
-      AiDifficulty.hard => 300,
-    };
+    final delay = SettingsService.instance.fastAiMoves
+        ? 150
+        : switch (widget.difficulty) {
+            AiDifficulty.easy => 700,
+            AiDifficulty.medium => 500,
+            AiDifficulty.hard => 300,
+          };
     Future<void>.delayed(Duration(milliseconds: delay), () {
       if (!mounted || !_isAiTurn) return;
       _playAiMove();
@@ -129,26 +132,30 @@ class _DotsBoardState extends State<DotsBoard> {
     final c = line.$3;
     if (type == 0) {
       if (r > 0) {
-        final sides = (_game.hLines[r - 1][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r - 1][c] != null ? 1 : 0) +
             (_game.vLines[r - 1][c] != null ? 1 : 0) +
             (_game.vLines[r - 1][c + 1] != null ? 1 : 0);
         if (sides == 3) return true;
       }
       if (r < DotsModel.boxRows) {
-        final sides = (_game.hLines[r + 1][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c] != null ? 1 : 0) +
             (_game.vLines[r][c + 1] != null ? 1 : 0);
         if (sides == 3) return true;
       }
     } else {
       if (c > 0) {
-        final sides = (_game.hLines[r][c - 1] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r][c - 1] != null ? 1 : 0) +
             (_game.hLines[r + 1][c - 1] != null ? 1 : 0) +
             (_game.vLines[r][c - 1] != null ? 1 : 0);
         if (sides == 3) return true;
       }
       if (c < DotsModel.boxCols) {
-        final sides = (_game.hLines[r][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r][c] != null ? 1 : 0) +
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c + 1] != null ? 1 : 0);
         if (sides == 3) return true;
@@ -163,26 +170,30 @@ class _DotsBoardState extends State<DotsBoard> {
     final c = line.$3;
     if (type == 0) {
       if (r > 0) {
-        final sides = (_game.hLines[r - 1][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r - 1][c] != null ? 1 : 0) +
             (_game.vLines[r - 1][c] != null ? 1 : 0) +
             (_game.vLines[r - 1][c + 1] != null ? 1 : 0);
         if (sides == 2) return true;
       }
       if (r < DotsModel.boxRows) {
-        final sides = (_game.hLines[r + 1][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c] != null ? 1 : 0) +
             (_game.vLines[r][c + 1] != null ? 1 : 0);
         if (sides == 2) return true;
       }
     } else {
       if (c > 0) {
-        final sides = (_game.hLines[r][c - 1] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r][c - 1] != null ? 1 : 0) +
             (_game.hLines[r + 1][c - 1] != null ? 1 : 0) +
             (_game.vLines[r][c - 1] != null ? 1 : 0);
         if (sides == 2) return true;
       }
       if (c < DotsModel.boxCols) {
-        final sides = (_game.hLines[r][c] != null ? 1 : 0) +
+        final sides =
+            (_game.hLines[r][c] != null ? 1 : 0) +
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c + 1] != null ? 1 : 0);
         if (sides == 2) return true;
@@ -194,18 +205,21 @@ class _DotsBoardState extends State<DotsBoard> {
   void _checkGameOver() {
     final state = _game.state;
     if (state is DotsWin) {
-      final winner =
-          state.winner == DotsPlayer.player1 ? 'Player 1' : 'Player 2';
+      final winner = state.winner == DotsPlayer.player1
+          ? 'Player 1'
+          : 'Player 2';
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         widget.onGameOver?.call(
-            '$winner wins!\nP1: ${_game.score1} · P2: ${_game.score2}');
+          '$winner wins!\nP1: ${_game.score1} · P2: ${_game.score2}',
+        );
       });
     } else if (state is DotsDraw) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         widget.onGameOver?.call(
-            "It's a draw!\nP1: ${_game.score1} · P2: ${_game.score2}");
+          "It's a draw!\nP1: ${_game.score1} · P2: ${_game.score2}",
+        );
       });
     }
   }
@@ -218,9 +232,15 @@ class _DotsBoardState extends State<DotsBoard> {
       children: [
         GameStatusBar(
           player1: PlayerInfo(
-              label: 'Player 1', color: _p1Color, score: _game.score1),
+            label: 'Player 1',
+            color: _p1Color,
+            score: _game.score1,
+          ),
           player2: PlayerInfo(
-              label: 'Player 2', color: _p2Color, score: _game.score2),
+            label: 'Player 2',
+            color: _p2Color,
+            score: _game.score2,
+          ),
           activePlayer: _game.state is DotsPlaying ? activePlayer : 0,
           message: _overrideMessage,
         ),
@@ -257,7 +277,10 @@ class _DotsBoardState extends State<DotsBoard> {
     final paintSize = paintAreaSize.width < paintAreaSize.height
         ? paintAreaSize.width
         : paintAreaSize.height;
-    if (dx < 0 || dy < 0 || dx > paintAreaSize.width || dy > paintAreaSize.height) {
+    if (dx < 0 ||
+        dy < 0 ||
+        dx > paintAreaSize.width ||
+        dy > paintAreaSize.height) {
       return;
     }
 
@@ -333,11 +356,12 @@ class _DotsPainter extends CustomPainter {
         final owner = game.boxes[r][c];
         if (owner == null) continue;
         final fill = Paint()
-          ..color =
-              (owner == DotsPlayer.player1 ? _p1Color : _p2Color)
-                  .withValues(alpha: 0.18);
+          ..color = (owner == DotsPlayer.player1 ? _p1Color : _p2Color)
+              .withValues(alpha: 0.18);
         canvas.drawRect(
-            Rect.fromLTWH(c * cellW, r * cellH, cellW, cellH), fill);
+          Rect.fromLTWH(c * cellW, r * cellH, cellW, cellH),
+          fill,
+        );
       }
     }
 
@@ -350,8 +374,11 @@ class _DotsPainter extends CustomPainter {
           ..color = player == DotsPlayer.player1 ? _p1Color : _p2Color
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(Offset(c * cellW, r * cellH),
-            Offset((c + 1) * cellW, r * cellH), linePaint);
+        canvas.drawLine(
+          Offset(c * cellW, r * cellH),
+          Offset((c + 1) * cellW, r * cellH),
+          linePaint,
+        );
       }
     }
 
@@ -364,8 +391,11 @@ class _DotsPainter extends CustomPainter {
           ..color = player == DotsPlayer.player1 ? _p1Color : _p2Color
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(Offset(c * cellW, r * cellH),
-            Offset(c * cellW, (r + 1) * cellH), linePaint);
+        canvas.drawLine(
+          Offset(c * cellW, r * cellH),
+          Offset(c * cellW, (r + 1) * cellH),
+          linePaint,
+        );
       }
     }
 

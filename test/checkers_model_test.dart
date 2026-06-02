@@ -40,6 +40,14 @@ void main() {
       expect(result, false);
     });
 
+    test('rejects out-of-bounds taps', () {
+      expect(game.tap(-1, 0), false);
+      expect(game.tap(0, -1), false);
+      expect(game.tap(CheckersModel.size, 0), false);
+      expect(game.tap(0, CheckersModel.size), false);
+      expect(game.current, CheckersPlayer.red);
+    });
+
     test('restart resets the game', () {
       game.tap(5, 0);
       game.restart();

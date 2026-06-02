@@ -30,9 +30,9 @@ class GomokuModel {
   GomokuState state;
 
   GomokuModel()
-      : _board = List.generate(size, (_) => List.filled(size, null)),
-        current = GomokuPlayer.black,
-        state = const GomokuPlaying();
+    : _board = List.generate(size, (_) => List.filled(size, null)),
+      current = GomokuPlayer.black,
+      state = const GomokuPlaying();
 
   /// Read-only view of the board.
   List<UnmodifiableListView<GomokuPlayer?>> get board =>
@@ -45,12 +45,10 @@ class GomokuModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'board': _board
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'current': current.index,
-        'state': _stateToJson(state),
-      };
+    'board': _board.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'current': current.index,
+    'state': _stateToJson(state),
+  };
 
   static Map<String, dynamic> _stateToJson(GomokuState s) {
     if (s is GomokuWin) return {'type': 'win', 'winner': s.winner.index};
@@ -64,8 +62,9 @@ class GomokuModel {
     for (int r = 0; r < GomokuModel.size; r++) {
       final row = board[r] as List;
       for (int c = 0; c < GomokuModel.size; c++) {
-        model._board[r][c] =
-            row[c] == null ? null : GomokuPlayer.values[row[c] as int];
+        model._board[r][c] = row[c] == null
+            ? null
+            : GomokuPlayer.values[row[c] as int];
       }
     }
     model.current = GomokuPlayer.values[json['current'] as int];
@@ -86,6 +85,7 @@ class GomokuModel {
 
   bool play(int row, int col) {
     if (state is! GomokuPlaying) return false;
+    if (row < 0 || row >= size || col < 0 || col >= size) return false;
     if (_board[row][col] != null) return false;
 
     _board[row][col] = current;

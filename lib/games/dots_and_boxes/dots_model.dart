@@ -42,10 +42,10 @@ class DotsModel {
   int score2;
 
   DotsModel()
-      : current = DotsPlayer.player1,
-        state = const DotsPlaying(),
-        score1 = 0,
-        score2 = 0 {
+    : current = DotsPlayer.player1,
+      state = const DotsPlaying(),
+      score1 = 0,
+      score2 = 0 {
     _hLines = List.generate(dotRows, (_) => List.filled(dotCols - 1, null));
     _vLines = List.generate(dotRows - 1, (_) => List.filled(dotCols, null));
     _boxes = List.generate(boxRows, (_) => List.filled(boxCols, null));
@@ -71,20 +71,14 @@ class DotsModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'hLines': _hLines
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'vLines': _vLines
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'boxes': _boxes
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'current': current.index,
-        'state': _stateToJson(state),
-        'score1': score1,
-        'score2': score2,
-      };
+    'hLines': _hLines.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'vLines': _vLines.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'boxes': _boxes.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'current': current.index,
+    'state': _stateToJson(state),
+    'score1': score1,
+    'score2': score2,
+  };
 
   static Map<String, dynamic> _stateToJson(DotsState s) {
     if (s is DotsWin) return {'type': 'win', 'winner': s.winner.index};
@@ -98,24 +92,27 @@ class DotsModel {
     for (int r = 0; r < DotsModel.dotRows; r++) {
       final row = hLines[r] as List;
       for (int c = 0; c < DotsModel.dotCols - 1; c++) {
-        model._hLines[r][c] =
-            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+        model._hLines[r][c] = row[c] == null
+            ? null
+            : DotsPlayer.values[row[c] as int];
       }
     }
     final vLines = json['vLines'] as List;
     for (int r = 0; r < DotsModel.dotRows - 1; r++) {
       final row = vLines[r] as List;
       for (int c = 0; c < DotsModel.dotCols; c++) {
-        model._vLines[r][c] =
-            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+        model._vLines[r][c] = row[c] == null
+            ? null
+            : DotsPlayer.values[row[c] as int];
       }
     }
     final boxes = json['boxes'] as List;
     for (int r = 0; r < DotsModel.boxRows; r++) {
       final row = boxes[r] as List;
       for (int c = 0; c < DotsModel.boxCols; c++) {
-        model._boxes[r][c] =
-            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+        model._boxes[r][c] = row[c] == null
+            ? null
+            : DotsPlayer.values[row[c] as int];
       }
     }
     model.current = DotsPlayer.values[json['current'] as int];
@@ -139,7 +136,9 @@ class DotsModel {
   /// Draw a horizontal line between (row, col) and (row, col+1).
   bool drawHLine(int row, int col) {
     if (state is! DotsPlaying) return false;
-    if (row < 0 || row >= dotRows || col < 0 || col >= dotCols - 1) return false;
+    if (row < 0 || row >= dotRows || col < 0 || col >= dotCols - 1) {
+      return false;
+    }
     if (_hLines[row][col] != null) return false;
 
     _hLines[row][col] = current;
@@ -152,7 +151,9 @@ class DotsModel {
   /// Draw a vertical line between (row, col) and (row+1, col).
   bool drawVLine(int row, int col) {
     if (state is! DotsPlaying) return false;
-    if (row < 0 || row >= dotRows - 1 || col < 0 || col >= dotCols) return false;
+    if (row < 0 || row >= dotRows - 1 || col < 0 || col >= dotCols) {
+      return false;
+    }
     if (_vLines[row][col] != null) return false;
 
     _vLines[row][col] = current;
@@ -207,8 +208,9 @@ class DotsModel {
   }
 
   void _switchPlayer() {
-    current =
-        current == DotsPlayer.player1 ? DotsPlayer.player2 : DotsPlayer.player1;
+    current = current == DotsPlayer.player1
+        ? DotsPlayer.player2
+        : DotsPlayer.player1;
   }
 
   void _checkGameOver() {

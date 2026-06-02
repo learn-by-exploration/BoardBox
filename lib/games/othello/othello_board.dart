@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/games/othello/othello_model.dart';
 import 'package:common_games/models/game_mode.dart';
+import 'package:common_games/services/settings_service.dart';
 import 'package:common_games/widgets/game_status_bar.dart';
 
 class OthelloBoard extends StatefulWidget {
@@ -73,11 +74,13 @@ class _OthelloBoardState extends State<OthelloBoard> {
   void _scheduleAiMove() {
     if (!_isAiTurn) return;
     setState(() => _aiThinking = true);
-    final delay = switch (widget.difficulty) {
-      AiDifficulty.easy => 700,
-      AiDifficulty.medium => 500,
-      AiDifficulty.hard => 300,
-    };
+    final delay = SettingsService.instance.fastAiMoves
+        ? 150
+        : switch (widget.difficulty) {
+            AiDifficulty.easy => 700,
+            AiDifficulty.medium => 500,
+            AiDifficulty.hard => 300,
+          };
     Future<void>.delayed(Duration(milliseconds: delay), () {
       if (!mounted || !_isAiTurn) return;
       _playAiMove();
@@ -155,20 +158,23 @@ class _OthelloBoardState extends State<OthelloBoard> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         widget.onGameOver?.call(
-            '$winner wins!\nBlack: ${_game.blackCount} · White: ${_game.whiteCount}');
+          '$winner wins!\nBlack: ${_game.blackCount} · White: ${_game.whiteCount}',
+        );
       });
     } else if (state is OthelloDraw) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         widget.onGameOver?.call(
-            "It's a draw!\nBlack: ${_game.blackCount} · White: ${_game.whiteCount}");
+          "It's a draw!\nBlack: ${_game.blackCount} · White: ${_game.whiteCount}",
+        );
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final validMoves = _game.getValidMoves();
+    final showMoveHints = SettingsService.instance.showMoveHints;
+    final validMoves = showMoveHints ? _game.getValidMoves() : <List<int>>[];
     final activePlayer = _game.current == OthelloPlayer.black ? 1 : 2;
 
     return Column(
@@ -190,48 +196,49 @@ class _OthelloBoardState extends State<OthelloBoard> {
         Expanded(
           child: Center(
             child: AspectRatio(
-            aspectRatio: 1,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF1B5E20), width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+              aspectRatio: 1,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
                   ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: OthelloModel.size,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF1B5E20), width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                itemCount: OthelloModel.size * OthelloModel.size,
-                itemBuilder: (context, index) {
-                  final row = index ~/ OthelloModel.size;
-                  final col = index % OthelloModel.size;
-                  final isValid =
-                      validMoves.any((m) => m[0] == row && m[1] == col);
-                  return _OthelloCell(
-                    piece: _game.board[row][col],
-                    isValidMove: isValid,
-                    onTap: () => _onTap(row, col),
-                    row: row,
-                    col: col,
-                  );
-                },
+                clipBehavior: Clip.antiAlias,
+                child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: OthelloModel.size,
+                  ),
+                  itemCount: OthelloModel.size * OthelloModel.size,
+                  itemBuilder: (context, index) {
+                    final row = index ~/ OthelloModel.size;
+                    final col = index % OthelloModel.size;
+                    final isValid = validMoves.any(
+                      (m) => m[0] == row && m[1] == col,
+                    );
+                    return _OthelloCell(
+                      piece: _game.board[row][col],
+                      isValidMove: isValid,
+                      onTap: () => _onTap(row, col),
+                      row: row,
+                      col: col,
+                    );
+                  },
+                ),
               ),
             ),
-          ),
           ),
         ),
       ],
@@ -275,7 +282,9 @@ class _OthelloCell extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             border: Border.all(
-                color: Colors.black.withValues(alpha: 0.25), width: 0.5),
+              color: Colors.black.withValues(alpha: 0.25),
+              width: 0.5,
+            ),
           ),
           child: Center(
             child: piece != null
@@ -303,19 +312,19 @@ class _OthelloCell extends StatelessWidget {
                     ),
                   )
                 : isValidMove
-                    ? Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.30),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            width: 1.5,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                ? Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.30),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ),
       ),

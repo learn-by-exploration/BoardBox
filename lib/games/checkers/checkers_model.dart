@@ -32,11 +32,11 @@ class CheckersModel {
   bool _midJump;
 
   CheckersModel()
-      : _board = List.generate(size, (_) => List.filled(size, null)),
-        current = CheckersPlayer.red,
-        state = const CheckersPlaying(),
-        _highlightedMoves = [],
-        _midJump = false {
+    : _board = List.generate(size, (_) => List.filled(size, null)),
+      current = CheckersPlayer.red,
+      state = const CheckersPlaying(),
+      _highlightedMoves = [],
+      _midJump = false {
     _setupInitial();
   }
 
@@ -45,8 +45,7 @@ class CheckersModel {
       _board.map(UnmodifiableListView<String?>.new).toList();
 
   /// Read-only view of highlighted moves.
-  List<List<int>> get highlightedMoves =>
-      List.unmodifiable(_highlightedMoves);
+  List<List<int>> get highlightedMoves => List.unmodifiable(_highlightedMoves);
 
   void _setupInitial() {
     for (int r = 0; r < 3; r++) {
@@ -73,16 +72,14 @@ class CheckersModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'board': _board
-            .map((row) => row.toList())
-            .toList(),
-        'current': current.index,
-        'state': _stateToJson(state),
-        'selectedRow': selectedRow,
-        'selectedCol': selectedCol,
-        'highlightedMoves': _highlightedMoves,
-        'midJump': _midJump,
-      };
+    'board': _board.map((row) => row.toList()).toList(),
+    'current': current.index,
+    'state': _stateToJson(state),
+    'selectedRow': selectedRow,
+    'selectedCol': selectedCol,
+    'highlightedMoves': _highlightedMoves,
+    'midJump': _midJump,
+  };
 
   static Map<String, dynamic> _stateToJson(CheckersState s) {
     if (s is CheckersWin) return {'type': 'win', 'winner': s.winner.index};
@@ -119,6 +116,7 @@ class CheckersModel {
   /// Returns true if tap was handled.
   bool tap(int row, int col) {
     if (state is! CheckersPlaying) return false;
+    if (row < 0 || row >= size || col < 0 || col >= size) return false;
 
     // If mid-jump, only allow continuation
     if (_midJump) {
@@ -198,8 +196,9 @@ class CheckersModel {
     selectedCol = null;
     _highlightedMoves = [];
     _midJump = false;
-    current =
-        current == CheckersPlayer.red ? CheckersPlayer.black : CheckersPlayer.red;
+    current = current == CheckersPlayer.red
+        ? CheckersPlayer.black
+        : CheckersPlayer.red;
 
     // Check win condition — the current player (just switched) loses if
     // they have no pieces or no moves.
@@ -245,11 +244,22 @@ class CheckersModel {
     final directions = <List<int>>[];
 
     if (isKing) {
-      directions.addAll([[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+      directions.addAll([
+        [-1, -1],
+        [-1, 1],
+        [1, -1],
+        [1, 1],
+      ]);
     } else if (piece == 'r') {
-      directions.addAll([[-1, -1], [-1, 1]]);
+      directions.addAll([
+        [-1, -1],
+        [-1, 1],
+      ]);
     } else {
-      directions.addAll([[1, -1], [1, 1]]);
+      directions.addAll([
+        [1, -1],
+        [1, 1],
+      ]);
     }
 
     final moves = <List<int>>[];
@@ -265,7 +275,11 @@ class CheckersModel {
         // Check jump
         final jr = nr + d[0];
         final jc = nc + d[1];
-        if (jr >= 0 && jc >= 0 && jr < size && jc < size && _board[jr][jc] == null) {
+        if (jr >= 0 &&
+            jc >= 0 &&
+            jr < size &&
+            jc < size &&
+            _board[jr][jc] == null) {
           moves.add([jr, jc]);
         }
       }
@@ -280,11 +294,22 @@ class CheckersModel {
     final directions = <List<int>>[];
 
     if (isKing) {
-      directions.addAll([[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+      directions.addAll([
+        [-1, -1],
+        [-1, 1],
+        [1, -1],
+        [1, 1],
+      ]);
     } else if (piece == 'r') {
-      directions.addAll([[-1, -1], [-1, 1]]);
+      directions.addAll([
+        [-1, -1],
+        [-1, 1],
+      ]);
     } else {
-      directions.addAll([[1, -1], [1, 1]]);
+      directions.addAll([
+        [1, -1],
+        [1, 1],
+      ]);
     }
 
     final captures = <List<int>>[];
@@ -296,7 +321,11 @@ class CheckersModel {
       if (_isOpponent(nr, nc)) {
         final jr = nr + d[0];
         final jc = nc + d[1];
-        if (jr >= 0 && jc >= 0 && jr < size && jc < size && _board[jr][jc] == null) {
+        if (jr >= 0 &&
+            jc >= 0 &&
+            jr < size &&
+            jc < size &&
+            _board[jr][jc] == null) {
           captures.add([jr, jc]);
         }
       }
@@ -315,8 +344,12 @@ class CheckersModel {
     for (final row in _board) {
       for (final cell in row) {
         if (cell == null) continue;
-        if (player == CheckersPlayer.red && (cell == 'r' || cell == 'R')) return true;
-        if (player == CheckersPlayer.black && (cell == 'b' || cell == 'B')) return true;
+        if (player == CheckersPlayer.red && (cell == 'r' || cell == 'R')) {
+          return true;
+        }
+        if (player == CheckersPlayer.black && (cell == 'b' || cell == 'B')) {
+          return true;
+        }
       }
     }
     return false;

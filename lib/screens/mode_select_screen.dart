@@ -6,7 +6,8 @@ import 'package:common_games/screens/home_screen.dart';
 
 const _rules = <GameType, _RulesData>{
   GameType.gomoku: _RulesData(
-    objective: 'Get five of your stones in a row — '
+    objective:
+        'Get five of your stones in a row — '
         'horizontally, vertically, or diagonally.',
     board: '15 × 15 grid',
     turns: 'Players alternate placing one stone per turn.',
@@ -19,7 +20,8 @@ const _rules = <GameType, _RulesData>{
   GameType.othello: _RulesData(
     objective: 'Have the most discs of your colour when the board is full.',
     board: '8 × 8 grid, starts with 4 discs in the centre',
-    turns: 'Place a disc to outflank opponent discs and flip them. '
+    turns:
+        'Place a disc to outflank opponent discs and flip them. '
         'If you can\'t move, your turn is skipped.',
     tips: [
       'Corners are the strongest positions — aim for them.',
@@ -30,7 +32,8 @@ const _rules = <GameType, _RulesData>{
   GameType.checkers: _RulesData(
     objective: 'Capture all opponent pieces or block them so they can\'t move.',
     board: '8 × 8 board with pieces on dark squares',
-    turns: 'Move diagonally forward. Captures are mandatory. '
+    turns:
+        'Move diagonally forward. Captures are mandatory. '
         'Reach the far row to become a King (moves backward too).',
     tips: [
       'Keep your back row as long as possible.',
@@ -41,7 +44,8 @@ const _rules = <GameType, _RulesData>{
   GameType.dotsAndBoxes: _RulesData(
     objective: 'Complete more boxes than your opponent.',
     board: '5 × 5 dot grid (4 × 4 boxes)',
-    turns: 'Draw one line per turn between adjacent dots. '
+    turns:
+        'Draw one line per turn between adjacent dots. '
         'Complete a box to claim it and take another turn.',
     tips: [
       'Avoid drawing the third side of a box unless you want to give it away.',
@@ -52,7 +56,8 @@ const _rules = <GameType, _RulesData>{
   GameType.tictactoe: _RulesData(
     objective: 'Get your symbols in a row before your opponent does.',
     board: 'Choose 3×3 (win with 3), 4×4 (win with 4), or 5×5 (win with 4).',
-    turns: 'X always goes first. Players alternate placing one symbol per turn.',
+    turns:
+        'X always goes first. Players alternate placing one symbol per turn.',
     tips: [
       'Take the centre on 3×3 — it\'s the most powerful square.',
       'On 4×4 and 5×5, build fork threats (two ways to win at once).',
@@ -92,8 +97,11 @@ class ModeSelectScreen extends StatefulWidget {
 class _ModeSelectScreenState extends State<ModeSelectScreen> {
   int _boardSize = 3;
 
-  void _startGame(BuildContext context, GameMode mode,
-      [AiDifficulty difficulty = AiDifficulty.medium]) {
+  void _startGame(
+    BuildContext context,
+    GameMode mode, [
+    AiDifficulty difficulty = AiDifficulty.medium,
+  ]) {
     Navigator.pushReplacement<void, void>(
       context,
       MaterialPageRoute<void>(
@@ -124,38 +132,41 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
             children: [
               Text(
                 'Select Difficulty',
-                style: Theme.of(ctx)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              ...AiDifficulty.values.map((d) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: Icon(
-                        d == AiDifficulty.easy
-                            ? Icons.sentiment_satisfied_alt
-                            : d == AiDifficulty.medium
-                                ? Icons.psychology_outlined
-                                : Icons.local_fire_department,
-                        color: d == AiDifficulty.easy
-                            ? Colors.green
-                            : d == AiDifficulty.medium
-                                ? colorScheme.primary
-                                : Colors.redAccent,
-                      ),
-                      title: Text(d.label,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(d.description),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      tileColor: colorScheme.surfaceContainerLow,
-                      onTap: () => Navigator.pop(ctx, d),
+              ...AiDifficulty.values.map(
+                (d) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Icon(
+                      d == AiDifficulty.easy
+                          ? Icons.sentiment_satisfied_alt
+                          : d == AiDifficulty.medium
+                          ? Icons.psychology_outlined
+                          : Icons.local_fire_department,
+                      color: d == AiDifficulty.easy
+                          ? Colors.green
+                          : d == AiDifficulty.medium
+                          ? colorScheme.primary
+                          : Colors.redAccent,
                     ),
-                  )),
+                    title: Text(
+                      d.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(d.description),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    tileColor: colorScheme.surfaceContainerLow,
+                    onTap: () => Navigator.pop(ctx, d),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -184,10 +195,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
               if (widget.gameType == GameType.tictactoe) ...[
                 Text(
                   'Board Size',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 SegmentedButton<int>(
@@ -218,10 +228,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
               // ── Mode buttons ──────────────────────────────────────────
               Text(
                 'Choose Mode',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Row(
@@ -253,10 +262,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
               // ── How to play ───────────────────────────────────────────
               Text(
                 'How to Play',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _InfoCard(
@@ -279,10 +287,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
               const SizedBox(height: 20),
               Text(
                 'Tips',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               ...rules.tips.map(
@@ -291,12 +298,18 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.lightbulb_outline,
-                          size: 18, color: colorScheme.primary),
+                      Icon(
+                        Icons.lightbulb_outline,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                          child: Text(tip,
-                              style: Theme.of(context).textTheme.bodyMedium)),
+                        child: Text(
+                          tip,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -336,11 +349,12 @@ class _ModeButton extends StatelessWidget {
         children: [
           Icon(icon, size: 32, color: color),
           const SizedBox(height: 8),
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
           Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
@@ -378,11 +392,12 @@ class _InfoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(body, style: Theme.of(context).textTheme.bodyMedium),
                 ],

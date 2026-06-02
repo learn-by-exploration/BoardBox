@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:common_games/screens/privacy_policy_screen.dart';
+import 'package:common_games/services/settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,36 +11,24 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _showMoveHints = true;
-  bool _fastAi = false;
+  late final SettingsService _settings;
 
   @override
   void initState() {
     super.initState();
-    _loadPrefs();
+    _settings = SettingsService.instance;
+    _settings.addListener(_onSettingsChanged);
   }
 
-  Future<void> _loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _showMoveHints = prefs.getBool('show_move_hints') ?? true;
-      _fastAi = prefs.getBool('fast_ai') ?? false;
-    });
+  @override
+  void dispose() {
+    _settings.removeListener(_onSettingsChanged);
+    super.dispose();
   }
 
-  Future<void> _saveShowHints(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('show_move_hints', value);
+  void _onSettingsChanged() {
     if (!mounted) return;
-    setState(() => _showMoveHints = value);
-  }
-
-  Future<void> _saveFastAi(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('fast_ai', value);
-    if (!mounted) return;
-    setState(() => _fastAi = value);
+    setState(() {});
   }
 
   Future<void> _clearStats() async {
@@ -50,7 +37,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Clear Statistics?'),
         content: const Text(
-            'This will reset all win/loss/draw records. This cannot be undone.'),
+          'This will reset all win/loss/draw records. This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -66,24 +54,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       if (!mounted) return;
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _settings.preferences;
       // Remove only win/loss/draw keys — do NOT wipe gameplay preferences.
       final statKeys = prefs
           .getKeys()
-          .where((k) =>
-              k.endsWith('_wins') ||
-              k.endsWith('_losses') ||
-              k.endsWith('_draws'))
+          .where(
+            (k) =>
+                k.endsWith('_wins') ||
+                k.endsWith('_losses') ||
+                k.endsWith('_draws'),
+          )
           .toList();
       for (final key in statKeys) {
         await prefs.remove(key);
       }
       if (!mounted) return;
-      await _loadPrefs();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Statistics cleared')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Statistics cleared')));
     }
   }
 
@@ -92,9 +80,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
           const SizedBox(height: 8),
@@ -102,23 +88,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Show move hints'),
             subtitle: const Text('Highlight valid moves on the board'),
-            value: _showMoveHints,
-            onChanged: _saveShowHints,
-            secondary: Icon(Icons.lightbulb_outline, color: colorScheme.primary),
+            value: _settings.showMoveHints,
+            onChanged: _settings.setShowMoveHints,
+            secondary: Icon(
+              Icons.lightbulb_outline,
+              color: colorScheme.primary,
+            ),
           ),
           SwitchListTile(
             title: const Text('Fast AI moves'),
             subtitle: const Text('Reduce AI thinking delay'),
-            value: _fastAi,
-            onChanged: _saveFastAi,
-            secondary:
-                Icon(Icons.speed_rounded, color: colorScheme.primary),
+            value: _settings.fastAiMoves,
+            onChanged: _settings.setFastAiMoves,
+            secondary: Icon(Icons.speed_rounded, color: colorScheme.primary),
+          ),
+          SwitchListTile(
+            title: const Text('Haptics'),
+            subtitle: const Text('Vibrate on moves and game over'),
+            value: _settings.hapticsEnabled,
+            onChanged: _settings.setHapticsEnabled,
+            secondary: Icon(
+              Icons.vibration_rounded,
+              color: colorScheme.primary,
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.contrast_rounded, color: colorScheme.primary),
+            title: const Text('Theme'),
+            subtitle: Text(_themeModeLabel(_settings.themeMode)),
+            trailing: DropdownButton<ThemeMode>(
+              value: _settings.themeMode,
+              onChanged: (mode) {
+                if (mode != null) _settings.setThemeMode(mode);
+              },
+              items: const [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text('System'),
+                ),
+                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              ],
+            ),
           ),
           const Divider(),
           const _SectionHeader(title: 'Data'),
           ListTile(
-            leading:
-                Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+            leading: Icon(
+              Icons.delete_outline_rounded,
+              color: colorScheme.error,
+            ),
             title: const Text('Clear statistics'),
             subtitle: const Text('Reset all win/loss/draw records'),
             onTap: _clearStats,
@@ -146,6 +165,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+String _themeModeLabel(ThemeMode mode) => switch (mode) {
+  ThemeMode.system => 'Follow device setting',
+  ThemeMode.light => 'Always use light mode',
+  ThemeMode.dark => 'Always use dark mode',
+};
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
 
@@ -158,9 +183,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -39,8 +39,10 @@ Flutter differs, call that out in review notes.
 - Current models are mutable: methods such as `play`, `tap`, `drawHLine`, and
   `restart` mutate internal state and expose read-only board views. Do not
   assume immutable model replacement unless the app is deliberately refactored.
-- Persistence uses `SharedPreferences` through `GameStats` and settings-related
-  services.
+- Persistence uses `SharedPreferences` through `GameStats`, `SettingsService`,
+  and the board JSON save/restore flow in `GameScreen`.
+- Undo is conditional: only show or expect undo when a board has supplied an
+  undo callback. At present, Gomoku and Tic Tac Toe provide move history.
 - Prefer package imports like `package:common_games/...`; linting enforces this.
 
 ## Game Invariants
@@ -69,6 +71,8 @@ For public-release review, lead with bugs and risks before summaries.
   AI moves, pass/skip logic, draw detection, and restart behavior.
 - Check widget behavior for async timers or delayed AI moves firing after a game
   is reset, disposed, or navigated away from.
+- Verify saved game restore by pausing/leaving a game and reopening the same
+  game/mode/board-size path.
 - Verify release-sensitive files: Android signing config, package name, version,
   app icon resources, privacy policy, and CI workflow.
 - Do not modify keystores, certificates, `android/key.properties`, or other

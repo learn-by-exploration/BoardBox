@@ -31,11 +31,11 @@ class OthelloModel {
   int whiteCount;
 
   OthelloModel()
-      : _board = List.generate(size, (_) => List.filled(size, null)),
-        current = OthelloPlayer.black,
-        state = const OthelloPlaying(),
-        blackCount = 2,
-        whiteCount = 2 {
+    : _board = List.generate(size, (_) => List.filled(size, null)),
+      current = OthelloPlayer.black,
+      state = const OthelloPlaying(),
+      blackCount = 2,
+      whiteCount = 2 {
     _setupInitial();
   }
 
@@ -61,14 +61,12 @@ class OthelloModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'board': _board
-            .map((row) => row.map((c) => c?.index).toList())
-            .toList(),
-        'current': current.index,
-        'state': _stateToJson(state),
-        'blackCount': blackCount,
-        'whiteCount': whiteCount,
-      };
+    'board': _board.map((row) => row.map((c) => c?.index).toList()).toList(),
+    'current': current.index,
+    'state': _stateToJson(state),
+    'blackCount': blackCount,
+    'whiteCount': whiteCount,
+  };
 
   static Map<String, dynamic> _stateToJson(OthelloState s) {
     if (s is OthelloWin) return {'type': 'win', 'winner': s.winner.index};
@@ -88,8 +86,9 @@ class OthelloModel {
     for (int r = 0; r < OthelloModel.size; r++) {
       final row = board[r] as List;
       for (int c = 0; c < OthelloModel.size; c++) {
-        model._board[r][c] =
-            row[c] == null ? null : OthelloPlayer.values[row[c] as int];
+        model._board[r][c] = row[c] == null
+            ? null
+            : OthelloPlayer.values[row[c] as int];
       }
     }
     model.current = OthelloPlayer.values[json['current'] as int];
@@ -112,6 +111,7 @@ class OthelloModel {
 
   bool play(int row, int col) {
     if (state is! OthelloPlaying) return false;
+    if (row < 0 || row >= size || col < 0 || col >= size) return false;
     if (_board[row][col] != null) return false;
 
     final flips = _getFlips(row, col, current);
@@ -140,8 +140,9 @@ class OthelloModel {
   }
 
   void _advance() {
-    final opponent =
-        current == OthelloPlayer.black ? OthelloPlayer.white : OthelloPlayer.black;
+    final opponent = current == OthelloPlayer.black
+        ? OthelloPlayer.white
+        : OthelloPlayer.black;
 
     // Check if opponent has moves
     if (_hasValidMoves(opponent)) {
@@ -189,21 +190,31 @@ class OthelloModel {
   }
 
   List<List<int>> _getFlips(int r, int c, OthelloPlayer player) {
-    final opponent =
-        player == OthelloPlayer.black ? OthelloPlayer.white : OthelloPlayer.black;
+    final opponent = player == OthelloPlayer.black
+        ? OthelloPlayer.white
+        : OthelloPlayer.black;
     final flips = <List<int>>[];
 
     const dirs = [
-      [-1, -1], [-1, 0], [-1, 1],
-      [0, -1],           [0, 1],
-      [1, -1],  [1, 0],  [1, 1],
+      [-1, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, -1],
+      [0, 1],
+      [1, -1],
+      [1, 0],
+      [1, 1],
     ];
 
     for (final dir in dirs) {
       final line = <List<int>>[];
       int i = r + dir[0];
       int j = c + dir[1];
-      while (i >= 0 && j >= 0 && i < size && j < size && _board[i][j] == opponent) {
+      while (i >= 0 &&
+          j >= 0 &&
+          i < size &&
+          j < size &&
+          _board[i][j] == opponent) {
         line.add([i, j]);
         i += dir[0];
         j += dir[1];

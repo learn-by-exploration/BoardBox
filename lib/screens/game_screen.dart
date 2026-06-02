@@ -41,11 +41,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final ValueNotifier<VoidCallback?> _undoNotifier = ValueNotifier(null);
 
   /// Notifier that board widgets update after every move with their model JSON.
-  final ValueNotifier<Map<String, dynamic>?> _stateNotifier =
-      ValueNotifier(null);
+  final ValueNotifier<Map<String, dynamic>?> _stateNotifier = ValueNotifier(
+    null,
+  );
 
   /// Restored state loaded from SharedPreferences on launch.
   Map<String, dynamic>? _savedState;
+  bool _restoreLoaded = false;
 
   String get _saveKey => widget.gameType == GameType.tictactoe
       ? 'game_save_${widget.gameType.name}_${widget.boardSize}'
@@ -75,10 +77,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Future<void> _tryRestoreGame() async {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_saveKey);
-    if (json != null && mounted) {
-      setState(
-          () => _savedState = jsonDecode(json) as Map<String, dynamic>);
+    Map<String, dynamic>? decodedState;
+    if (json != null) {
+      try {
+        decodedState = jsonDecode(json) as Map<String, dynamic>;
+      } on FormatException {
+        await prefs.remove(_saveKey);
+      } on TypeError {
+        await prefs.remove(_saveKey);
+      }
     }
+    if (!mounted) return;
+    setState(() {
+      _savedState = decodedState;
+      _restoreLoaded = true;
+    });
   }
 
   Future<void> _saveGame() async {
@@ -100,6 +113,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _boardKey++;
       _gameOverShown = false; // allow next game-over dialog on the fresh board
       _savedState = null;
+      _restoreLoaded = true;
     });
     // Reset undo notifier so the button becomes disabled for the new game
     _undoNotifier.value = null;
@@ -153,12 +167,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       barrierDismissible: false,
       builder: (ctx) {
         final colorScheme = Theme.of(ctx).colorScheme;
-        final isDraw = result.toLowerCase().contains('draw') ||
+        final isDraw =
+            result.toLowerCase().contains('draw') ||
             result.toLowerCase().contains('tie');
 
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           icon: Icon(
             isDraw ? Icons.handshake_outlined : Icons.emoji_events_rounded,
             size: 48,
@@ -216,11 +232,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           const SizedBox(width: 4),
           ValueListenableBuilder<VoidCallback?>(
             valueListenable: _undoNotifier,
-            builder: (ctx, undoFn, _) => IconButton(
-              icon: const Icon(Icons.undo_rounded),
-              tooltip: 'Undo',
-              onPressed: undoFn,
-            ),
+            builder: (ctx, undoFn, _) {
+              if (undoFn == null) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.undo_rounded),
+                tooltip: 'Undo',
+                onPressed: undoFn,
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.restart_alt_rounded),
@@ -230,7 +249,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
       ),
       body: SafeArea(
-        child: _buildBoard(),
+        child: _restoreLoaded
+            ? _buildBoard()
+            : const Center(child: CircularProgressIndicator()),
       ),
     );
   }
@@ -239,50 +260,55 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     switch (widget.gameType) {
       case GameType.gomoku:
         return GomokuBoard(
-            key: ValueKey(_boardKey),
-            mode: widget.mode,
-            difficulty: widget.difficulty,
-            onGameOver: _onGameOver,
-            undoNotifier: _undoNotifier,
-            stateNotifier: _stateNotifier,
-            initialState: _savedState);
+          key: ValueKey(_boardKey),
+          mode: widget.mode,
+          difficulty: widget.difficulty,
+          onGameOver: _onGameOver,
+          undoNotifier: _undoNotifier,
+          stateNotifier: _stateNotifier,
+          initialState: _savedState,
+        );
       case GameType.othello:
         return OthelloBoard(
-            key: ValueKey(_boardKey),
-            mode: widget.mode,
-            difficulty: widget.difficulty,
-            onGameOver: _onGameOver,
-            undoNotifier: _undoNotifier,
-            stateNotifier: _stateNotifier,
-            initialState: _savedState);
+          key: ValueKey(_boardKey),
+          mode: widget.mode,
+          difficulty: widget.difficulty,
+          onGameOver: _onGameOver,
+          undoNotifier: _undoNotifier,
+          stateNotifier: _stateNotifier,
+          initialState: _savedState,
+        );
       case GameType.checkers:
         return CheckersBoard(
-            key: ValueKey(_boardKey),
-            mode: widget.mode,
-            difficulty: widget.difficulty,
-            onGameOver: _onGameOver,
-            undoNotifier: _undoNotifier,
-            stateNotifier: _stateNotifier,
-            initialState: _savedState);
+          key: ValueKey(_boardKey),
+          mode: widget.mode,
+          difficulty: widget.difficulty,
+          onGameOver: _onGameOver,
+          undoNotifier: _undoNotifier,
+          stateNotifier: _stateNotifier,
+          initialState: _savedState,
+        );
       case GameType.dotsAndBoxes:
         return DotsBoard(
-            key: ValueKey(_boardKey),
-            mode: widget.mode,
-            difficulty: widget.difficulty,
-            onGameOver: _onGameOver,
-            undoNotifier: _undoNotifier,
-            stateNotifier: _stateNotifier,
-            initialState: _savedState);
+          key: ValueKey(_boardKey),
+          mode: widget.mode,
+          difficulty: widget.difficulty,
+          onGameOver: _onGameOver,
+          undoNotifier: _undoNotifier,
+          stateNotifier: _stateNotifier,
+          initialState: _savedState,
+        );
       case GameType.tictactoe:
         return TicTacToeBoard(
-            key: ValueKey(_boardKey),
-            mode: widget.mode,
-            boardSize: widget.boardSize,
-            difficulty: widget.difficulty,
-            onGameOver: _onGameOver,
-            undoNotifier: _undoNotifier,
-            stateNotifier: _stateNotifier,
-            initialState: _savedState);
+          key: ValueKey(_boardKey),
+          mode: widget.mode,
+          boardSize: widget.boardSize,
+          difficulty: widget.difficulty,
+          onGameOver: _onGameOver,
+          undoNotifier: _undoNotifier,
+          stateNotifier: _stateNotifier,
+          initialState: _savedState,
+        );
     }
   }
 }

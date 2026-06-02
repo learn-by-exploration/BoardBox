@@ -26,8 +26,10 @@ void main() {
 
     test('detects row win for X', () {
       final m = TicTacToeModel(size: 3);
-      m.play(0, 0); m.play(1, 0); // X, O
-      m.play(0, 1); m.play(1, 1); // X, O
+      m.play(0, 0);
+      m.play(1, 0); // X, O
+      m.play(0, 1);
+      m.play(1, 1); // X, O
       m.play(0, 2); // X wins row 0
       expect(m.state, isA<TicTacToeWin>());
       expect((m.state as TicTacToeWin).winner, TicTacToePlayer.x);
@@ -35,16 +37,20 @@ void main() {
 
     test('detects column win', () {
       final m = TicTacToeModel(size: 3);
-      m.play(0, 0); m.play(0, 1); // X, O
-      m.play(1, 0); m.play(0, 2); // X, O
+      m.play(0, 0);
+      m.play(0, 1); // X, O
+      m.play(1, 0);
+      m.play(0, 2); // X, O
       m.play(2, 0); // X wins col 0
       expect(m.state, isA<TicTacToeWin>());
     });
 
     test('detects diagonal win', () {
       final m = TicTacToeModel(size: 3);
-      m.play(0, 0); m.play(0, 1); // X, O
-      m.play(1, 1); m.play(0, 2); // X, O
+      m.play(0, 0);
+      m.play(0, 1); // X, O
+      m.play(1, 1);
+      m.play(0, 2); // X, O
       m.play(2, 2); // X wins diagonal
       expect(m.state, isA<TicTacToeWin>());
     });
@@ -54,25 +60,32 @@ void main() {
       // X O X
       // X X O
       // O X O  → draw
-      m.play(0, 0); m.play(0, 1);
-      m.play(0, 2); m.play(1, 2);
-      m.play(1, 0); m.play(2, 0);
-      m.play(1, 1); m.play(2, 2);
+      m.play(0, 0);
+      m.play(0, 1);
+      m.play(0, 2);
+      m.play(1, 2);
+      m.play(1, 0);
+      m.play(2, 0);
+      m.play(1, 1);
+      m.play(2, 2);
       m.play(2, 1);
       expect(m.state, isA<TicTacToeDraw>());
     });
 
     test('play returns false after game over', () {
       final m = TicTacToeModel(size: 3);
-      m.play(0, 0); m.play(1, 0);
-      m.play(0, 1); m.play(1, 1);
+      m.play(0, 0);
+      m.play(1, 0);
+      m.play(0, 1);
+      m.play(1, 1);
       m.play(0, 2); // X wins
       expect(m.play(2, 2), isFalse);
     });
 
     test('restart resets to initial state', () {
       final m = TicTacToeModel(size: 3);
-      m.play(0, 0); m.play(0, 1);
+      m.play(0, 0);
+      m.play(0, 1);
       m.restart();
       expect(m.state, isA<TicTacToePlaying>());
       expect(m.current, TicTacToePlayer.x);
@@ -87,17 +100,22 @@ void main() {
 
     test('3 in a row does NOT win on 4×4', () {
       final m = TicTacToeModel(size: 4);
-      m.play(0, 0); m.play(1, 0);
-      m.play(0, 1); m.play(1, 1);
+      m.play(0, 0);
+      m.play(1, 0);
+      m.play(0, 1);
+      m.play(1, 1);
       m.play(0, 2); // X has 3 in a row — should still be Playing
       expect(m.state, isA<TicTacToePlaying>());
     });
 
     test('4 in a row wins on 4×4', () {
       final m = TicTacToeModel(size: 4);
-      m.play(0, 0); m.play(1, 0);
-      m.play(0, 1); m.play(1, 1);
-      m.play(0, 2); m.play(1, 2);
+      m.play(0, 0);
+      m.play(1, 0);
+      m.play(0, 1);
+      m.play(1, 1);
+      m.play(0, 2);
+      m.play(1, 2);
       m.play(0, 3); // X wins row 0
       expect(m.state, isA<TicTacToeWin>());
     });
@@ -110,9 +128,12 @@ void main() {
 
     test('4 in a row wins on 5×5', () {
       final m = TicTacToeModel(size: 5);
-      m.play(0, 0); m.play(1, 0);
-      m.play(0, 1); m.play(1, 1);
-      m.play(0, 2); m.play(1, 2);
+      m.play(0, 0);
+      m.play(1, 0);
+      m.play(0, 1);
+      m.play(1, 1);
+      m.play(0, 2);
+      m.play(1, 2);
       m.play(0, 3); // X has 4 in a row
       expect(m.state, isA<TicTacToeWin>());
     });
@@ -121,7 +142,9 @@ void main() {
   group('Serialization', () {
     test('toJson/fromJson round-trips correctly', () {
       final m = TicTacToeModel(size: 4);
-      m.play(0, 0); m.play(1, 1); m.play(0, 1);
+      m.play(0, 0);
+      m.play(1, 1);
+      m.play(0, 1);
       final json = m.toJson();
       final restored = TicTacToeModel.fromJson(json);
       expect(restored.size, 4);

@@ -38,7 +38,8 @@ const _games = [
     icon: Icons.circle,
     color: Color(0xFF2E7D32),
     gameType: GameType.othello,
-    description: 'Flip your opponent\'s discs by trapping them on an 8×8 board.',
+    description:
+        'Flip your opponent\'s discs by trapping them on an 8×8 board.',
   ),
   _GameInfo(
     title: 'Checkers',
@@ -46,7 +47,8 @@ const _games = [
     icon: Icons.check_circle_outline,
     color: Color(0xFF769656),
     gameType: GameType.checkers,
-    description: 'Jump and capture all your opponent\'s pieces on an 8×8 board.',
+    description:
+        'Jump and capture all your opponent\'s pieces on an 8×8 board.',
   ),
   _GameInfo(
     title: 'Dots & Boxes',
@@ -120,8 +122,8 @@ class HomeScreen extends StatelessWidget {
                 child: Text(
                   'Tap a game to start playing',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
@@ -149,8 +151,10 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       children: const [
-        Text('Classic board games you can play alone against the '
-            'computer or with a friend on the same device.'),
+        Text(
+          'Classic board games you can play alone against the '
+          'computer or with a friend on the same device.',
+        ),
       ],
     );
   }
@@ -171,7 +175,9 @@ class _GameTile extends StatelessWidget {
       shadowColor: info.color.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -218,28 +224,27 @@ class _GameTile extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 info.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 2),
               Text(
                 info.subtitle,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: info.color,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: info.color,
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 info.description,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

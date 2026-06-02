@@ -26,6 +26,14 @@ void main() {
       expect(game.play(0, 0), false);
     });
 
+    test('rejects out-of-bounds moves', () {
+      expect(game.play(-1, 0), false);
+      expect(game.play(0, -1), false);
+      expect(game.play(GomokuModel.size, 0), false);
+      expect(game.play(0, GomokuModel.size), false);
+      expect(game.current, GomokuPlayer.black);
+    });
+
     test('detects horizontal five-in-a-row', () {
       // Black plays row 0, cols 0-4; white plays row 1
       for (int i = 0; i < 4; i++) {

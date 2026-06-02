@@ -4,8 +4,8 @@
 **Flutter SDK:** `^3.12.0` · **Target SDK:** 35 · **Min SDK:** Flutter default (21)
 **Java/Kotlin target:** JVM 17
 
-Four classic local-multiplayer board games in one Flutter app:
-Gomoku · Othello · Checkers · Dots & Boxes
+Five classic local-multiplayer board games in one Flutter app:
+Gomoku · Othello · Checkers · Dots & Boxes · Tic Tac Toe
 
 ---
 
@@ -37,21 +37,22 @@ dart format --output=none --set-exit-if-changed .
 
 ```
 lib/
-├── main.dart                  # App entry point; wires SettingsService provider
+├── main.dart                  # App entry point; initializes GameStats + SettingsService
 ├── models/
 │   └── game_mode.dart         # GameMode (twoPlayer/singlePlayer), AiDifficulty
 ├── screens/
 │   ├── splash_screen.dart     # Animated launch screen
 │   ├── home_screen.dart       # 2-column game grid, stats, settings link
 │   ├── mode_select_screen.dart# 2-player vs AI; difficulty picker; game rules
-│   ├── game_screen.dart       # Hosts board widget; records stats; game-over dialog
+│   ├── game_screen.dart       # Hosts board widget; save/restore; stats; game-over dialog
 │   ├── settings_screen.dart   # Hints, haptics, fast AI, dark mode
 │   └── privacy_policy_screen.dart
 ├── games/
 │   ├── gomoku/                # 15×15 board, win on 5-in-a-row
 │   ├── othello/               # 8×8 Reversi with disc-flip logic
 │   ├── checkers/              # 8×8, mandatory captures, multi-jump, king promotion
-│   └── dots_and_boxes/        # 5×5 dots (4×4 boxes), box-capture bonus turn
+│   ├── dots_and_boxes/        # 5×5 dots (4×4 boxes), box-capture bonus turn
+│   └── tictactoe/             # 3×3, 4×4, or 5×5 boards
 ├── services/
 │   ├── game_stats.dart        # SharedPreferences-backed win/loss/draw counts
 │   ├── settings_service.dart  # ChangeNotifier; showMoveHints / haptics / themeMode
@@ -74,14 +75,16 @@ Each game follows the same two-file pattern:
 `games/*/` model files must not import `flutter/material.dart` or any widget.
 This keeps game logic unit-testable without a widget tree.
 
-### Immutability
-Every move returns a new model instance — never mutate the existing state.
-The board files rely on this for correct widget rebuilds.
+### Model state
+Current models are mutable pure-Dart objects. Board widgets mutate model state,
+then call `setState`, push JSON to `stateNotifier`, and notify game-over when
+needed. If you refactor toward immutable models, update every board widget and
+the save/undo contract together.
 
-### Services are singletons via ChangeNotifier
-`SettingsService` and `GameStats` are injected at the top of the widget tree in
-`main.dart`. Access them with `context.watch<SettingsService>()` (rebuild) or
-`context.read<SettingsService>()` (action only).
+### Services
+`GameStats` and `SettingsService` are initialized in `main.dart`. Settings are
+managed by the `SettingsService` singleton; do not write gameplay settings
+directly to `SharedPreferences` from widgets.
 
 ### AI lives in the board widget
 AI difficulty logic (`_easyMove`, `_mediumMove`, `_hardMove`) is in each
@@ -93,10 +96,11 @@ AI difficulty logic (`_easyMove`, `_mediumMove`, `_hardMove`) is in each
 
 | Game | Critical rules |
 |------|---------------|
-| **Gomoku** | 15×15 grid; exactly 5 consecutive stones wins (not 6+); black moves first |
+| **Gomoku** | 15×15 grid; five or more consecutive stones currently wins; black moves first |
 | **Othello** | 8×8; player must pass if no valid moves; game ends when neither player can move |
 | **Checkers** | Mandatory captures; multi-jump chains must complete; red moves first; kings move/capture both directions |
 | **Dots & Boxes** | Completing a box grants an extra turn; game ends when all boxes are claimed |
+| **Tic Tac Toe** | 3×3 wins with 3; 4×4 and 5×5 win with 4; X moves first |
 
 Write a model test for any change to game logic. Failing these silently would
 ship a broken game.
@@ -125,7 +129,7 @@ Board (widget) files need at minimum a pump-and-tap golden path test.
 ### Adding tests for new game logic
 1. Create `test/<game>_model_test.dart`
 2. Cover: initial state, valid moves, win detection, draw detection, restart
-3. Cover edge cases specific to the game (mandatory captures in checkers, pass in Othello, etc.)
+3. Cover edge cases specific to the game (mandatory captures in checkers, pass in Othello, out-of-bounds inputs, etc.)
 
 ---
 

@@ -7,7 +7,9 @@ class HapticService {
 
   /// Light tap — valid piece placement / cell selection.
   static void onMove() {
-    if (SettingsService.instance.hapticsEnabled) HapticFeedback.selectionClick();
+    if (SettingsService.instance.hapticsEnabled) {
+      HapticFeedback.selectionClick();
+    }
   }
 
   /// Medium — piece capture.

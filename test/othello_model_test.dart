@@ -27,6 +27,14 @@ void main() {
       expect(game.play(0, 0), false); // no flips possible
     });
 
+    test('rejects out-of-bounds moves', () {
+      expect(game.play(-1, 0), false);
+      expect(game.play(0, -1), false);
+      expect(game.play(OthelloModel.size, 0), false);
+      expect(game.play(0, OthelloModel.size), false);
+      expect(game.current, OthelloPlayer.black);
+    });
+
     test('playing valid move flips pieces', () {
       // d3 (row=2, col=3) is valid for black at start
       final played = game.play(2, 3);

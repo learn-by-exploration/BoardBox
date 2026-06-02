@@ -17,37 +17,40 @@ class SettingsService extends ChangeNotifier {
   bool get fastAiMoves => _fastAiMoves;
   bool get hapticsEnabled => _hapticsEnabled;
   ThemeMode get themeMode => _themeMode;
+  Future<SharedPreferences> get preferences async =>
+      _prefs ??= await SharedPreferences.getInstance();
 
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-    _showMoveHints = _prefs!.getBool('show_move_hints') ?? true;
-    _fastAiMoves = _prefs!.getBool('fast_ai') ?? false;
-    _hapticsEnabled = _prefs!.getBool('haptics_enabled') ?? true;
-    final themeModeIndex = _prefs!.getInt('theme_mode') ?? ThemeMode.system.index;
-    _themeMode = ThemeMode.values[themeModeIndex.clamp(0, ThemeMode.values.length - 1)];
+    final prefs = await preferences;
+    _showMoveHints = prefs.getBool('show_move_hints') ?? true;
+    _fastAiMoves = prefs.getBool('fast_ai') ?? false;
+    _hapticsEnabled = prefs.getBool('haptics_enabled') ?? true;
+    final themeModeIndex = prefs.getInt('theme_mode') ?? ThemeMode.system.index;
+    _themeMode =
+        ThemeMode.values[themeModeIndex.clamp(0, ThemeMode.values.length - 1)];
   }
 
   Future<void> setShowMoveHints(bool v) async {
     _showMoveHints = v;
-    await _prefs?.setBool('show_move_hints', v);
+    await (await preferences).setBool('show_move_hints', v);
     notifyListeners();
   }
 
   Future<void> setFastAiMoves(bool v) async {
     _fastAiMoves = v;
-    await _prefs?.setBool('fast_ai', v);
+    await (await preferences).setBool('fast_ai', v);
     notifyListeners();
   }
 
   Future<void> setHapticsEnabled(bool v) async {
     _hapticsEnabled = v;
-    await _prefs?.setBool('haptics_enabled', v);
+    await (await preferences).setBool('haptics_enabled', v);
     notifyListeners();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    await _prefs?.setInt('theme_mode', mode.index);
+    await (await preferences).setInt('theme_mode', mode.index);
     notifyListeners();
   }
 }

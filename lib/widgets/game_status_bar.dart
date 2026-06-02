@@ -35,8 +35,8 @@ class GameStatusBar extends StatelessWidget {
     final activeLabel = activePlayer == 1
         ? player1.label
         : activePlayer == 2
-            ? player2.label
-            : '';
+        ? player2.label
+        : '';
     final defaultMsg = activePlayer == 0 ? '' : "$activeLabel's turn";
 
     return Padding(
@@ -50,8 +50,9 @@ class GameStatusBar extends StatelessWidget {
                 message ?? defaultMsg,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
-                  fontStyle:
-                      message != null ? FontStyle.italic : FontStyle.normal,
+                  fontStyle: message != null
+                      ? FontStyle.italic
+                      : FontStyle.normal,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -112,9 +113,7 @@ class _PlayerChip extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            info.score != null
-                ? '${info.label}  ${info.score}'
-                : info.label,
+            info.score != null ? '${info.label}  ${info.score}' : info.label,
             style: theme.textTheme.labelSmall?.copyWith(
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               color: isActive ? info.color : cs.onSurfaceVariant,

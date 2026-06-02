@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/games/checkers/checkers_model.dart';
 import 'package:common_games/models/game_mode.dart';
+import 'package:common_games/services/settings_service.dart';
 import 'package:common_games/widgets/game_status_bar.dart';
 
 class CheckersBoard extends StatefulWidget {
@@ -72,11 +73,13 @@ class _CheckersBoardState extends State<CheckersBoard> {
   void _scheduleAiMove() {
     if (!_isAiTurn) return;
     setState(() => _aiThinking = true);
-    final delay = switch (widget.difficulty) {
-      AiDifficulty.easy => 700,
-      AiDifficulty.medium => 500,
-      AiDifficulty.hard => 300,
-    };
+    final delay = SettingsService.instance.fastAiMoves
+        ? 150
+        : switch (widget.difficulty) {
+            AiDifficulty.easy => 700,
+            AiDifficulty.medium => 500,
+            AiDifficulty.hard => 300,
+          };
     Future<void>.delayed(Duration(milliseconds: delay), () {
       if (!mounted || !_isAiTurn) return;
       _playAiMove();
@@ -94,7 +97,9 @@ class _CheckersBoardState extends State<CheckersBoard> {
         if (piece == null) continue;
         if (piece != 'b' && piece != 'B') continue;
         final didSelect = _game.tap(r, c);
-        if (!didSelect) continue; // tap failed (e.g. piece has no moves under mandatory-capture) — skip to avoid reading stale highlightedMoves
+        if (!didSelect) {
+          continue; // tap failed (e.g. piece has no moves under mandatory-capture) — skip to avoid reading stale highlightedMoves
+        }
         final moves = List<List<int>>.from(_game.highlightedMoves);
         if (moves.isNotEmpty) piecesWithMoves.add((r, c, moves));
       }
@@ -119,8 +124,9 @@ class _CheckersBoardState extends State<CheckersBoard> {
         final captures = piecesWithMoves
             .where((e) => e.$3.any((m) => (m[0] - e.$1).abs() == 2))
             .toList();
-        final candidates =
-            (mustCapture && captures.isNotEmpty) ? captures : piecesWithMoves;
+        final candidates = (mustCapture && captures.isNotEmpty)
+            ? captures
+            : piecesWithMoves;
         final p = candidates[_rng.nextInt(candidates.length)];
         pick = p;
         move = p.$3[_rng.nextInt(p.$3.length)];
@@ -133,9 +139,10 @@ class _CheckersBoardState extends State<CheckersBoard> {
           pick = p;
           // Black promotes at row 7 (CheckersModel.size - 1), not row 0.
           final kingCaptures = p.$3
-              .where((m) =>
-                  m[0] == CheckersModel.size - 1 ||
-                  (m[0] - p.$1).abs() == 2)
+              .where(
+                (m) =>
+                    m[0] == CheckersModel.size - 1 || (m[0] - p.$1).abs() == 2,
+              )
               .toList();
           move = kingCaptures.isNotEmpty
               ? kingCaptures[_rng.nextInt(kingCaptures.length)]
@@ -225,6 +232,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
 
   @override
   Widget build(BuildContext context) {
+    final showMoveHints = SettingsService.instance.showMoveHints;
     return Column(
       children: [
         GameStatusBar(
@@ -238,47 +246,47 @@ class _CheckersBoardState extends State<CheckersBoard> {
         Expanded(
           child: Center(
             child: AspectRatio(
-            aspectRatio: 1,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF5D4037),
-                  width: 4,
+              aspectRatio: 1,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF5D4037), width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                clipBehavior: Clip.antiAlias,
+                child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: CheckersModel.size,
                   ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: CheckersModel.size,
+                  itemCount: CheckersModel.size * CheckersModel.size,
+                  itemBuilder: (context, index) {
+                    final row = index ~/ CheckersModel.size;
+                    final col = index % CheckersModel.size;
+                    return _CheckersCell(
+                      row: row,
+                      col: col,
+                      piece: _game.board[row][col],
+                      isSelected:
+                          _game.selectedRow == row && _game.selectedCol == col,
+                      isHighlighted:
+                          showMoveHints &&
+                          _game.highlightedMoves.any(
+                            (m) => m[0] == row && m[1] == col,
+                          ),
+                      onTap: () => _onTap(row, col),
+                    );
+                  },
                 ),
-                itemCount: CheckersModel.size * CheckersModel.size,
-                itemBuilder: (context, index) {
-                  final row = index ~/ CheckersModel.size;
-                  final col = index % CheckersModel.size;
-                  return _CheckersCell(
-                    row: row,
-                    col: col,
-                    piece: _game.board[row][col],
-                    isSelected:
-                        _game.selectedRow == row && _game.selectedCol == col,
-                    isHighlighted: _game.highlightedMoves
-                        .any((m) => m[0] == row && m[1] == col),
-                    onTap: () => _onTap(row, col),
-                  );
-                },
               ),
             ),
-          ),
           ),
         ),
       ],
@@ -332,16 +340,15 @@ class _CheckersCell extends StatelessWidget {
             child: piece != null
                 ? _CheckersPiece(piece: piece!, isSelected: isSelected)
                 : isHighlighted
-                    ? Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
-                              const Color(0xFF4CAF50).withValues(alpha: 0.5),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                ? Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ),
       ),
@@ -382,8 +389,8 @@ class _CheckersPiece extends StatelessWidget {
           color: isSelected
               ? Colors.white
               : isRed
-                  ? Colors.red.shade900
-                  : Colors.grey.shade700,
+              ? Colors.red.shade900
+              : Colors.grey.shade700,
           width: isSelected ? 3 : 2,
         ),
         boxShadow: [
@@ -398,9 +405,7 @@ class _CheckersPiece extends StatelessWidget {
         ],
       ),
       child: isKing
-          ? const Center(
-              child: Icon(Icons.star, color: Colors.amber, size: 18),
-            )
+          ? const Center(child: Icon(Icons.star, color: Colors.amber, size: 18))
           : null,
     );
   }
