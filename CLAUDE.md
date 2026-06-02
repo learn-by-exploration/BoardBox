@@ -185,7 +185,7 @@ Pipeline: `.github/workflows/ci.yml`
 | `quality` | ubuntu-latest | every push & PR | format check · analyze · test + coverage |
 | `build-debug` | ubuntu-latest | every push & PR | debug APK → artifact (7 days) |
 | `build-android-release` | ubuntu-latest | `main` push | signed AAB → artifact (30 days) |
-| `build-web` | ubuntu-latest | `main` push | web build → GitHub Pages |
+| `build-web` | ubuntu-latest | `main` push | web build → artifact (30 days) |
 | `build-ios` | macos-latest | `main` push | iOS no-codesign compile check |
 
 `quality` must pass before any build job starts. A failing `quality` job blocks
@@ -326,8 +326,7 @@ This prevents any code from merging that would break the build or tests.
   or wire up `google-github-actions/upload-to-play` for automated delivery
 
 #### `build-web`
-- Requires GitHub Pages enabled (see §3c above)
-- Requires `pages: write` and `id-token: write` permissions (already in the YAML)
+- Uploads the compiled web bundle as an Actions artifact
 - Base href is `/BoardBox/` — matches the repo name; change if the repo is renamed
 - Uses Flutter's default web renderer for the pinned SDK
 
