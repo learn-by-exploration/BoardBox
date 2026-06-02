@@ -13,6 +13,10 @@ concurrency:
 env:
   FLUTTER_VERSION: '3.44.0'
 
+# Minimal default; deploy-pages job overrides to pages:write + id-token:write
+permissions:
+  contents: read
+
 jobs:
   # ─────────────────────────────────────────────────────────
   # 1. Analyze & Test  (every push / PR)
@@ -158,11 +162,13 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────
-  # 4. Build Web  (main branch only)
-  #    Uploads the built web bundle as an artifact.
+  # 4. Build Web + upload Pages artifact  (main branch only)
+  #    Static docs (privacy-policy, data-safety) are merged
+  #    into the Flutter web output before uploading.
+  #    Live URL: https://learn-by-exploration.github.io/BoardBox/
   # ─────────────────────────────────────────────────────────
   build-web:
-    name: Build Web
+    name: Build Web & Upload Pages Artifact
     runs-on: ubuntu-latest
     needs: quality
     if: github.ref == 'refs/heads/main'
@@ -182,15 +188,41 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href /BoardBox/
 
-      - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+      - name: Copy static docs into web output
+        run: |
+          cp docs/privacy-policy.html build/web/privacy-policy.html
+          cp docs/data-safety.html    build/web/data-safety.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: web-build-${{ github.sha }}
           path: build/web
-          retention-days: 30
 
   # ─────────────────────────────────────────────────────────
-  # 5. Build iOS (no-codesign)  (main branch only)
+  # 5. Deploy to GitHub Pages  (main branch only)
+  #    Requires: Settings → Pages → Source = GitHub Actions
+  # ─────────────────────────────────────────────────────────
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-web
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ─────────────────────────────────────────────────────────
+  # 6. Build iOS (no-codesign)  (main branch only)
   #    Verifies the iOS target compiles cleanly.
   #    Full App Store distribution requires a paid Apple
   #    developer account and signing certs — set up separately.

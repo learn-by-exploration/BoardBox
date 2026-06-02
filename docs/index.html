@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Board Box – Classic Board Games</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   Helvetica, Arial, sans-serif;
+      color: #1a1a1a;
+      background: #fafafa;
+    }
+    header {
+      background: linear-gradient(135deg, #5C35CC 0%, #7B52E0 100%);
+      color: #fff;
+      text-align: center;
+      padding: 64px 24px 48px;
+    }
+    header h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p  {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-top: 12px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .badges {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+    .badge {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .cta {
+      margin-top: 36px;
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #fff; color: #5C35CC; }
+    .btn-secondary {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.6);
+    }
+    section.games {
+      max-width: 800px;
+      margin: 56px auto 0;
+      padding: 0 20px;
+    }
+    section.games h2 {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #5C35CC;
+      margin-bottom: 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e0d9f7;
+      border-radius: 14px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(92,53,204,0.06);
+    }
+    .card .icon { font-size: 2.2rem; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-top: 10px; }
+    .card p  { font-size: 0.82rem; color: #666; margin-top: 6px; line-height: 1.5; }
+    section.privacy {
+      max-width: 700px;
+      margin: 56px auto 0;
+      padding: 0 20px;
+      text-align: center;
+    }
+    section.privacy h2 { font-size: 1.4rem; font-weight: 700; color: #5C35CC; }
+    section.privacy p  { font-size: 0.9rem; color: #555; margin-top: 10px; line-height: 1.6; }
+    .privacy-links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .privacy-links a {
+      color: #5C35CC;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      border: 1.5px solid #c5b4f0;
+      border-radius: 8px;
+      padding: 8px 18px;
+    }
+    .privacy-links a:hover { background: #f2eeff; }
+    footer {
+      margin-top: 64px;
+      border-top: 1px solid #ddd;
+      padding: 24px 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+    footer a { color: #5C35CC; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎲 Board Box</h1>
+  <p>Five classic board games. Local multiplayer. No ads. No tracking. Free.</p>
+  <div class="badges">
+    <span class="badge">No Ads</span>
+    <span class="badge">No Data Collected</span>
+    <span class="badge">Safe for All Ages</span>
+    <span class="badge">Local Multiplayer</span>
+  </div>
+  <div class="cta">
+    <a class="btn btn-primary"
+       href="https://play.google.com/store/apps/details?id=com.boardbox.app"
+       rel="noopener noreferrer">Get it on Google Play</a>
+    <a class="btn btn-secondary"
+       href="https://github.com/learn-by-exploration/BoardBox"
+       rel="noopener noreferrer">View on GitHub</a>
+  </div>
+</header>
+
+<section class="games">
+  <h2>Five Games in One App</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="icon">⚫</div>
+      <h3>Gomoku</h3>
+      <p>15×15 grid. Get five in a row to win. Strategic and challenging.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔵</div>
+      <h3>Othello</h3>
+      <p>8×8 Reversi. Flip your opponent's discs and dominate the board.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔴</div>
+      <h3>Checkers</h3>
+      <p>English draughts with mandatory captures and king promotion.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔲</div>
+      <h3>Dots &amp; Boxes</h3>
+      <p>Connect the dots, claim the boxes, score the most squares.</p>
+    </div>
+    <div class="card">
+      <div class="icon">✖️</div>
+      <h3>Tic Tac Toe</h3>
+      <p>Classic 3×3, plus 4×4 and 5×5 variants for more challenge.</p>
+    </div>
+  </div>
+</section>
+
+<section class="privacy">
+  <h2>Your Privacy Matters</h2>
+  <p>
+    Board Box collects <strong>zero personal data</strong>. No account needed.
+    No ads. No analytics. No network requests. Game stats stay on your device.
+    The app is fully compliant with COPPA, GDPR, and Google Play's Families Policy.
+  </p>
+  <div class="privacy-links">
+    <a href="privacy-policy.html">Privacy Policy</a>
+    <a href="data-safety.html">Data Safety</a>
+  </div>
+</section>
+
+<footer>
+  <p>
+    &copy; 2025 Board Box &nbsp;·&nbsp;
+    <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
+    <a href="data-safety.html">Data Safety</a> &nbsp;·&nbsp;
+    <a href="https://github.com/learn-by-exploration/BoardBox" rel="noopener noreferrer">GitHub</a>
+  </p>
+</footer>
+
+</body>
+</html>
