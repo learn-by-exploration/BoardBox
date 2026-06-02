@@ -9,7 +9,7 @@ when reviewing or changing the app.
 - Flutter app package: `common_games`
 - Public app name: `Board Box`
 - Android package: `com.boardbox.app`
-- CI Flutter version: `3.32.0` stable
+- CI Flutter version: `3.44.0` stable
 - Dart SDK constraint in `pubspec.yaml`: `^3.12.0`
 - Games: Gomoku, Othello, Checkers, Dots & Boxes, Tic Tac Toe
 - Main release checks in CI: format, analyze with `--fatal-infos`, tests with

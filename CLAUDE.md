@@ -200,7 +200,7 @@ Everything CI uses must also work locally. Mismatches are the #1 source of
 
 | Requirement | Version | How to check |
 |-------------|---------|-------------|
-| Flutter SDK | `3.32.0` stable (pinned in CI) | `flutter --version` |
+| Flutter SDK | `3.44.0` stable (pinned in CI) | `flutter --version` |
 | Dart SDK | bundled with Flutter | `dart --version` |
 | Java JDK | 17 | `java -version` |
 | Android SDK | via Flutter / Android Studio | `flutter doctor` |
@@ -211,8 +211,8 @@ Install / switch Flutter version:
 flutter upgrade                     # upgrade to latest stable
 # or use FVM to pin exactly:
 dart pub global activate fvm
-fvm install 3.32.0
-fvm use 3.32.0
+fvm install 3.44.0
+fvm use 3.44.0
 ```
 
 Check everything is wired correctly:
@@ -432,7 +432,7 @@ org.gradle.jvmargs=-Xmx4g
 ```
 
 **Flutter SDK version mismatch**
-CI pins Flutter to `3.32.0` stable. Use the same version locally:
+CI pins Flutter to `3.44.0` stable. Use the same version locally:
 ```bash
 flutter upgrade
 flutter --version
