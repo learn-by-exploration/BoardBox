@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Sensitive certificates — never commit
+*.der
+*.p12
+*.jks
+*.keystore
+deployment_cert.der
+upload_cert.der
