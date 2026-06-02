@@ -185,7 +185,7 @@ Pipeline: `.github/workflows/ci.yml`
 | `quality` | ubuntu-latest | every push & PR | format check · analyze · test + coverage |
 | `build-debug` | ubuntu-latest | every push & PR | debug APK → artifact (7 days) |
 | `build-android-release` | ubuntu-latest | `main` push | signed AAB → artifact (30 days) |
-| `build-web` | ubuntu-latest | `main` push | web build (CanvasKit) → GitHub Pages |
+| `build-web` | ubuntu-latest | `main` push | web build → GitHub Pages |
 | `build-ios` | macos-latest | `main` push | iOS no-codesign compile check |
 
 `quality` must pass before any build job starts. A failing `quality` job blocks
@@ -329,8 +329,7 @@ This prevents any code from merging that would break the build or tests.
 - Requires GitHub Pages enabled (see §3c above)
 - Requires `pages: write` and `id-token: write` permissions (already in the YAML)
 - Base href is `/BoardBox/` — matches the repo name; change if the repo is renamed
-- Uses CanvasKit renderer for pixel-accurate game boards; HTML renderer is faster
-  to load but may render `CustomPaint` incorrectly
+- Uses Flutter's default web renderer for the pinned SDK
 
 #### `build-ios`
 - Requires a **macOS runner** (billed at 10× the cost of ubuntu-latest on GitHub's
@@ -439,10 +438,10 @@ flutter --version
 ```
 
 **Web build works but game is slow**
-The CI and deployment use `--web-renderer canvaskit`. Locally `auto` may choose
-HTML renderer. For parity with prod, test with:
+CI and deployment use Flutter's default web renderer for the pinned SDK. For a
+local production-style smoke test, run:
 ```bash
-flutter run -d chrome --web-renderer canvaskit
+flutter build web --release --base-href /BoardBox/
 ```
 
 **Checkers multi-jump not completing**

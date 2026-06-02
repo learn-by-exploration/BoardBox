@@ -104,17 +104,46 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Decode keystore
+      - name: Validate signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
+          missing=0
+          for name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_STORE_PASSWORD \
+            ANDROID_KEY_PASSWORD \
+            ANDROID_KEY_ALIAS
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode \
             > android/upload-keystore.jks
 
       - name: Create key.properties
+        env:
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           cat > android/key.properties <<EOF
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
           storeFile=../upload-keystore.jks
           EOF
 
@@ -158,8 +187,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build web (CanvasKit renderer for best fidelity)
-        run: flutter build web --release --web-renderer canvaskit --base-href /BoardBox/
+      - name: Build web
+        run: flutter build web --release --base-href /BoardBox/
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v4
