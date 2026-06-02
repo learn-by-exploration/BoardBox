@@ -60,6 +60,56 @@ class OthelloModel {
     _setupInitial();
   }
 
+  Map<String, dynamic> toJson() => {
+        'board': _board
+            .map((row) => row.map((c) => c?.index).toList())
+            .toList(),
+        'current': current.index,
+        'state': _stateToJson(state),
+        'blackCount': blackCount,
+        'whiteCount': whiteCount,
+      };
+
+  static Map<String, dynamic> _stateToJson(OthelloState s) {
+    if (s is OthelloWin) return {'type': 'win', 'winner': s.winner.index};
+    if (s is OthelloDraw) return {'type': 'draw'};
+    return {'type': 'playing'};
+  }
+
+  static OthelloModel fromJson(Map<String, dynamic> json) {
+    final model = OthelloModel();
+    // Clear the initial setup
+    for (int r = 0; r < OthelloModel.size; r++) {
+      for (int c = 0; c < OthelloModel.size; c++) {
+        model._board[r][c] = null;
+      }
+    }
+    final board = json['board'] as List;
+    for (int r = 0; r < OthelloModel.size; r++) {
+      final row = board[r] as List;
+      for (int c = 0; c < OthelloModel.size; c++) {
+        model._board[r][c] =
+            row[c] == null ? null : OthelloPlayer.values[row[c] as int];
+      }
+    }
+    model.current = OthelloPlayer.values[json['current'] as int];
+    model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
+    model.blackCount = json['blackCount'] as int;
+    model.whiteCount = json['whiteCount'] as int;
+    return model;
+  }
+
+  static OthelloState _stateFromJson(Map<String, dynamic> s) {
+    switch (s['type'] as String) {
+      case 'win':
+        return OthelloWin(OthelloPlayer.values[s['winner'] as int]);
+      case 'draw':
+        return const OthelloDraw();
+      default:
+        return const OthelloPlaying();
+    }
+  }
+
   bool play(int row, int col) {
     if (state is! OthelloPlaying) return false;
     if (_board[row][col] != null) return false;

@@ -12,18 +12,24 @@ class DotsBoard extends StatefulWidget {
     required this.mode,
     this.difficulty = AiDifficulty.medium,
     this.onGameOver,
+    this.undoNotifier,
+    this.stateNotifier,
+    this.initialState,
   });
 
   final GameMode mode;
   final AiDifficulty difficulty;
   final void Function(String result)? onGameOver;
+  final ValueNotifier<VoidCallback?>? undoNotifier;
+  final ValueNotifier<Map<String, dynamic>?>? stateNotifier;
+  final Map<String, dynamic>? initialState;
 
   @override
   State<DotsBoard> createState() => _DotsBoardState();
 }
 
 class _DotsBoardState extends State<DotsBoard> {
-  final DotsModel _game = DotsModel();
+  late DotsModel _game;
   final Random _rng = Random();
   bool _aiThinking = false;
 
@@ -44,6 +50,18 @@ class _DotsBoardState extends State<DotsBoard> {
       widget.mode == GameMode.singlePlayer &&
       _game.current == DotsPlayer.player2 &&
       _game.state is DotsPlaying;
+
+  void _pushStateNotifier() {
+    widget.stateNotifier?.value = _game.toJson();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _game = widget.initialState != null
+        ? DotsModel.fromJson(widget.initialState!)
+        : DotsModel();
+  }
 
   void _scheduleAiMove() {
     if (!_isAiTurn) return;
@@ -100,6 +118,7 @@ class _DotsBoardState extends State<DotsBoard> {
     }
 
     setState(() => _aiThinking = false);
+    _pushStateNotifier();
     _checkGameOver();
     _scheduleAiMove();
   }
@@ -284,6 +303,7 @@ class _DotsBoardState extends State<DotsBoard> {
 
     if (acted) {
       setState(() {});
+      _pushStateNotifier();
       _checkGameOver();
       _scheduleAiMove();
     }

@@ -49,6 +49,16 @@ const _rules = <GameType, _RulesData>{
       'Count carefully in the endgame — one mistake flips the result.',
     ],
   ),
+  GameType.tictactoe: _RulesData(
+    objective: 'Get your symbols in a row before your opponent does.',
+    board: 'Choose 3×3 (win with 3), 4×4 (win with 4), or 5×5 (win with 4).',
+    turns: 'X always goes first. Players alternate placing one symbol per turn.',
+    tips: [
+      'Take the centre on 3×3 — it\'s the most powerful square.',
+      'On 4×4 and 5×5, build fork threats (two ways to win at once).',
+      'Block your opponent\'s three-in-a-row immediately on larger grids.',
+    ],
+  ),
 };
 
 class _RulesData {
@@ -65,15 +75,22 @@ class _RulesData {
   });
 }
 
-class ModeSelectScreen extends StatelessWidget {
-  final GameType gameType;
-  final String title;
-
+class ModeSelectScreen extends StatefulWidget {
   const ModeSelectScreen({
     super.key,
     required this.gameType,
     required this.title,
   });
+
+  final GameType gameType;
+  final String title;
+
+  @override
+  State<ModeSelectScreen> createState() => _ModeSelectScreenState();
+}
+
+class _ModeSelectScreenState extends State<ModeSelectScreen> {
+  int _boardSize = 3;
 
   void _startGame(BuildContext context, GameMode mode,
       [AiDifficulty difficulty = AiDifficulty.medium]) {
@@ -81,10 +98,11 @@ class ModeSelectScreen extends StatelessWidget {
       context,
       MaterialPageRoute<void>(
         builder: (_) => GameScreen(
-          gameType: gameType,
-          title: title,
+          gameType: widget.gameType,
+          title: widget.title,
           mode: mode,
           difficulty: difficulty,
+          boardSize: widget.gameType == GameType.tictactoe ? _boardSize : 3,
         ),
       ),
     );
@@ -152,17 +170,52 @@ class ModeSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final rules = _rules[gameType]!;
+    final rules = _rules[widget.gameType]!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Mode buttons ──
+              // ── Board size selector (TicTacToe only) ──────────────────
+              if (widget.gameType == GameType.tictactoe) ...[
+                Text(
+                  'Board Size',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 3,
+                      icon: Icon(Icons.grid_3x3_rounded),
+                      label: Text('3 × 3'),
+                    ),
+                    ButtonSegment(
+                      value: 4,
+                      icon: Icon(Icons.grid_4x4_rounded),
+                      label: Text('4 × 4'),
+                    ),
+                    ButtonSegment(
+                      value: 5,
+                      icon: Icon(Icons.grid_on_rounded),
+                      label: Text('5 × 5'),
+                    ),
+                  ],
+                  selected: {_boardSize},
+                  onSelectionChanged: (s) =>
+                      setState(() => _boardSize = s.first),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // ── Mode buttons ──────────────────────────────────────────
               Text(
                 'Choose Mode',
                 style: Theme.of(context)
@@ -197,7 +250,7 @@ class ModeSelectScreen extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // ── How to play ──
+              // ── How to play ───────────────────────────────────────────
               Text(
                 'How to Play',
                 style: Theme.of(context)
@@ -242,9 +295,8 @@ class ModeSelectScreen extends StatelessWidget {
                           size: 18, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(tip,
-                            style: Theme.of(context).textTheme.bodyMedium),
-                      ),
+                          child: Text(tip,
+                              style: Theme.of(context).textTheme.bodyMedium)),
                     ],
                   ),
                 ),

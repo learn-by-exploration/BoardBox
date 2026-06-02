@@ -72,6 +72,50 @@ class CheckersModel {
     _setupInitial();
   }
 
+  Map<String, dynamic> toJson() => {
+        'board': _board
+            .map((row) => row.toList())
+            .toList(),
+        'current': current.index,
+        'state': _stateToJson(state),
+        'selectedRow': selectedRow,
+        'selectedCol': selectedCol,
+        'highlightedMoves': _highlightedMoves,
+        'midJump': _midJump,
+      };
+
+  static Map<String, dynamic> _stateToJson(CheckersState s) {
+    if (s is CheckersWin) return {'type': 'win', 'winner': s.winner.index};
+    return {'type': 'playing'};
+  }
+
+  static CheckersModel fromJson(Map<String, dynamic> json) {
+    final model = CheckersModel();
+    final board = json['board'] as List;
+    for (int r = 0; r < CheckersModel.size; r++) {
+      final row = board[r] as List;
+      for (int c = 0; c < CheckersModel.size; c++) {
+        model._board[r][c] = row[c] as String?;
+      }
+    }
+    model.current = CheckersPlayer.values[json['current'] as int];
+    model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
+    model.selectedRow = json['selectedRow'] as int?;
+    model.selectedCol = json['selectedCol'] as int?;
+    model._highlightedMoves = (json['highlightedMoves'] as List)
+        .map((m) => List<int>.from(m as List))
+        .toList();
+    model._midJump = json['midJump'] as bool;
+    return model;
+  }
+
+  static CheckersState _stateFromJson(Map<String, dynamic> s) {
+    if ((s['type'] as String) == 'win') {
+      return CheckersWin(CheckersPlayer.values[s['winner'] as int]);
+    }
+    return const CheckersPlaying();
+  }
+
   /// Returns true if tap was handled.
   bool tap(int row, int col) {
     if (state is! CheckersPlaying) return false;

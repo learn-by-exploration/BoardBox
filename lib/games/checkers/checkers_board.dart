@@ -12,18 +12,24 @@ class CheckersBoard extends StatefulWidget {
     required this.mode,
     this.difficulty = AiDifficulty.medium,
     this.onGameOver,
+    this.undoNotifier,
+    this.stateNotifier,
+    this.initialState,
   });
 
   final GameMode mode;
   final AiDifficulty difficulty;
   final void Function(String result)? onGameOver;
+  final ValueNotifier<VoidCallback?>? undoNotifier;
+  final ValueNotifier<Map<String, dynamic>?>? stateNotifier;
+  final Map<String, dynamic>? initialState;
 
   @override
   State<CheckersBoard> createState() => _CheckersBoardState();
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
-  final CheckersModel _game = CheckersModel();
+  late CheckersModel _game;
   final Random _rng = Random();
   bool _aiThinking = false;
 
@@ -41,11 +47,24 @@ class _CheckersBoardState extends State<CheckersBoard> {
       _game.current == CheckersPlayer.black &&
       _game.state is CheckersPlaying;
 
+  void _pushStateNotifier() {
+    widget.stateNotifier?.value = _game.toJson();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _game = widget.initialState != null
+        ? CheckersModel.fromJson(widget.initialState!)
+        : CheckersModel();
+  }
+
   void _onTap(int row, int col) {
     if (_aiThinking) return;
     setState(() {
       _game.tap(row, col);
     });
+    _pushStateNotifier();
     _checkGameOver();
     _scheduleAiMove();
   }
@@ -156,6 +175,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
     }
 
     setState(() => _aiThinking = false);
+    _pushStateNotifier();
     _checkGameOver();
     _scheduleAiMove();
   }
@@ -296,32 +316,49 @@ class _CheckersCell extends StatelessWidget {
       bgColor = isDark ? const Color(0xFF769656) : const Color(0xFFEEEED2);
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          border: isHighlighted
-              ? Border.all(color: const Color(0xFF4CAF50), width: 2)
-              : null,
-        ),
-        child: Center(
-          child: piece != null
-              ? _CheckersPiece(piece: piece!, isSelected: isSelected)
-              : isHighlighted
-                  ? Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            const Color(0xFF4CAF50).withValues(alpha: 0.5),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+    return Semantics(
+      label: _cellLabel(),
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: isHighlighted
+                ? Border.all(color: const Color(0xFF4CAF50), width: 2)
+                : null,
+          ),
+          child: Center(
+            child: piece != null
+                ? _CheckersPiece(piece: piece!, isSelected: isSelected)
+                : isHighlighted
+                    ? Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+          ),
         ),
       ),
     );
+  }
+
+  String _cellLabel() {
+    final rowLetter = String.fromCharCode('A'.codeUnitAt(0) + row);
+    final colNum = col + 1;
+    if (piece != null) {
+      final color = (piece == 'r' || piece == 'R') ? 'Red' : 'Black';
+      final type = (piece == 'R' || piece == 'B') ? 'king' : 'piece';
+      final sel = isSelected ? ', selected' : '';
+      return '$color $type at $rowLetter$colNum$sel';
+    }
+    if (isHighlighted) return 'Move to $rowLetter$colNum';
+    return 'Empty $rowLetter$colNum';
   }
 }
 

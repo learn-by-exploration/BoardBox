@@ -70,6 +70,72 @@ class DotsModel {
     score2 = 0;
   }
 
+  Map<String, dynamic> toJson() => {
+        'hLines': _hLines
+            .map((row) => row.map((c) => c?.index).toList())
+            .toList(),
+        'vLines': _vLines
+            .map((row) => row.map((c) => c?.index).toList())
+            .toList(),
+        'boxes': _boxes
+            .map((row) => row.map((c) => c?.index).toList())
+            .toList(),
+        'current': current.index,
+        'state': _stateToJson(state),
+        'score1': score1,
+        'score2': score2,
+      };
+
+  static Map<String, dynamic> _stateToJson(DotsState s) {
+    if (s is DotsWin) return {'type': 'win', 'winner': s.winner.index};
+    if (s is DotsDraw) return {'type': 'draw'};
+    return {'type': 'playing'};
+  }
+
+  static DotsModel fromJson(Map<String, dynamic> json) {
+    final model = DotsModel();
+    final hLines = json['hLines'] as List;
+    for (int r = 0; r < DotsModel.dotRows; r++) {
+      final row = hLines[r] as List;
+      for (int c = 0; c < DotsModel.dotCols - 1; c++) {
+        model._hLines[r][c] =
+            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+      }
+    }
+    final vLines = json['vLines'] as List;
+    for (int r = 0; r < DotsModel.dotRows - 1; r++) {
+      final row = vLines[r] as List;
+      for (int c = 0; c < DotsModel.dotCols; c++) {
+        model._vLines[r][c] =
+            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+      }
+    }
+    final boxes = json['boxes'] as List;
+    for (int r = 0; r < DotsModel.boxRows; r++) {
+      final row = boxes[r] as List;
+      for (int c = 0; c < DotsModel.boxCols; c++) {
+        model._boxes[r][c] =
+            row[c] == null ? null : DotsPlayer.values[row[c] as int];
+      }
+    }
+    model.current = DotsPlayer.values[json['current'] as int];
+    model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
+    model.score1 = json['score1'] as int;
+    model.score2 = json['score2'] as int;
+    return model;
+  }
+
+  static DotsState _stateFromJson(Map<String, dynamic> s) {
+    switch (s['type'] as String) {
+      case 'win':
+        return DotsWin(DotsPlayer.values[s['winner'] as int]);
+      case 'draw':
+        return const DotsDraw();
+      default:
+        return const DotsPlaying();
+    }
+  }
+
   /// Draw a horizontal line between (row, col) and (row, col+1).
   bool drawHLine(int row, int col) {
     if (state is! DotsPlaying) return false;

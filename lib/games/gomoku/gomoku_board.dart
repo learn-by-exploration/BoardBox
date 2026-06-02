@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/games/gomoku/gomoku_model.dart';
 import 'package:common_games/models/game_mode.dart';
+import 'package:common_games/services/haptic_service.dart';
+import 'package:common_games/services/settings_service.dart';
 import 'package:common_games/widgets/game_status_bar.dart';
 
 class GomokuBoard extends StatefulWidget {
@@ -12,21 +14,54 @@ class GomokuBoard extends StatefulWidget {
     required this.mode,
     this.difficulty = AiDifficulty.medium,
     this.onGameOver,
+    this.undoNotifier,
+    this.stateNotifier,
+    this.initialState,
   });
 
   final GameMode mode;
   final AiDifficulty difficulty;
   final void Function(String result)? onGameOver;
+  final ValueNotifier<VoidCallback?>? undoNotifier;
+  final ValueNotifier<Map<String, dynamic>?>? stateNotifier;
+  final Map<String, dynamic>? initialState;
 
   @override
   State<GomokuBoard> createState() => _GomokuBoardState();
 }
 
 class _GomokuBoardState extends State<GomokuBoard> {
-  final GomokuModel _game = GomokuModel();
+  late GomokuModel _game;
   final Random _rng = Random();
   bool _aiThinking = false;
   (int, int)? _lastMove;
+
+  final List<Map<String, dynamic>> _history = [];
+
+  void _pushHistory() {
+    _history.add(_game.toJson());
+  }
+
+  void _performUndo() {
+    if (_history.isEmpty) return;
+    // In single-player mode undo both human and AI response
+    if (widget.mode == GameMode.singlePlayer && _history.length >= 2) {
+      _history.removeLast();
+    }
+    if (_history.isEmpty) return;
+    final snapshot = _history.removeLast();
+    setState(() {
+      _game = GomokuModel.fromJson(snapshot);
+      _aiThinking = false;
+      _lastMove = null;
+    });
+    _updateUndoNotifier();
+    _pushStateNotifier();
+  }
+
+  void _updateUndoNotifier() {
+    widget.undoNotifier?.value = _history.isNotEmpty ? _performUndo : null;
+  }
 
   bool get _isAiTurn =>
       widget.mode == GameMode.singlePlayer &&
@@ -45,9 +80,17 @@ class _GomokuBoardState extends State<GomokuBoard> {
 
   void _onTap(int row, int col) {
     if (_aiThinking) return;
+    _pushHistory();
     final played = _game.play(row, col);
-    if (!played) return;
+    if (!played) {
+      // revert the history push since nothing changed
+      _history.removeLast();
+      return;
+    }
+    HapticService.onMove();
     setState(() => _lastMove = (row, col));
+    _updateUndoNotifier();
+    _pushStateNotifier();
     _checkGameOver();
     _scheduleAiMove();
   }
@@ -55,11 +98,13 @@ class _GomokuBoardState extends State<GomokuBoard> {
   void _scheduleAiMove() {
     if (!_isAiTurn) return;
     setState(() => _aiThinking = true);
-    final delay = switch (widget.difficulty) {
-      AiDifficulty.easy => 700,
-      AiDifficulty.medium => 500,
-      AiDifficulty.hard => 300,
-    };
+    final delay = SettingsService.instance.fastAiMoves
+        ? 150
+        : switch (widget.difficulty) {
+            AiDifficulty.easy => 700,
+            AiDifficulty.medium => 500,
+            AiDifficulty.hard => 300,
+          };
     Future<void>.delayed(Duration(milliseconds: delay), () {
       if (!mounted || !_isAiTurn) return;
       _playAiMove();
@@ -77,6 +122,7 @@ class _GomokuBoardState extends State<GomokuBoard> {
     }
     if (empty.isEmpty) {
       setState(() => _aiThinking = false);
+      _updateUndoNotifier();
       return;
     }
 
@@ -113,20 +159,38 @@ class _GomokuBoardState extends State<GomokuBoard> {
       _lastMove = pick;
       _aiThinking = false;
     });
+    _updateUndoNotifier();
+    _pushStateNotifier();
     _checkGameOver();
   }
 
   (int, int) _bestMoveHard(
       List<List<GomokuPlayer?>> board, List<(int, int)> empty) {
-    const directions = [(0, 1), (1, 0), (1, 1), (1, -1)];
-    int bestScore = -1;
-    (int, int) bestMove = empty[_rng.nextInt(empty.length)];
-    for (final pos in empty) {
-      int score = 0;
-      for (final dir in directions) {
-        score += _lineScore(board, pos, dir, GomokuPlayer.white);
-        score += _lineScore(board, pos, dir, GomokuPlayer.black);
+    // Restrict candidates to cells within distance 2 of existing stones
+    final candidates = empty.where((pos) {
+      for (int dr = -2; dr <= 2; dr++) {
+        for (int dc = -2; dc <= 2; dc++) {
+          if (dr == 0 && dc == 0) continue;
+          final nr = pos.$1 + dr, nc = pos.$2 + dc;
+          if (nr >= 0 &&
+              nc >= 0 &&
+              nr < GomokuModel.size &&
+              nc < GomokuModel.size &&
+              board[nr][nc] != null) {
+            return true;
+          }
+        }
       }
+      return false;
+    }).toList();
+
+    final pool = candidates.isNotEmpty ? candidates : empty;
+
+    int bestScore = -1;
+    (int, int) bestMove = pool[_rng.nextInt(pool.length)];
+
+    for (final pos in pool) {
+      final score = _evaluateCell(board, pos);
       if (score > bestScore) {
         bestScore = score;
         bestMove = pos;
@@ -135,38 +199,78 @@ class _GomokuBoardState extends State<GomokuBoard> {
     return bestMove;
   }
 
-  int _lineScore(List<List<GomokuPlayer?>> board, (int, int) pos,
+  /// Evaluates a candidate cell by scoring all 4 directions for both players.
+  /// Offense score uses white (AI), defense uses black (human) × 1.1 weight.
+  int _evaluateCell(List<List<GomokuPlayer?>> board, (int, int) pos) {
+    const directions = [(0, 1), (1, 0), (1, 1), (1, -1)];
+    int totalScore = 0;
+
+    for (final dir in directions) {
+      final offScore = _directionScore(board, pos, dir, GomokuPlayer.white);
+      final defScore = _directionScore(board, pos, dir, GomokuPlayer.black);
+      totalScore += offScore + (defScore * 1.1).toInt();
+    }
+    return totalScore;
+  }
+
+  /// Scores placing at [pos] in [dir] for [player].
+  /// Counts run length and whether each end is open, closed (blocked by
+  /// opponent), or wall (edge of board). Open ends multiply the threat value.
+  int _directionScore(List<List<GomokuPlayer?>> board, (int, int) pos,
       (int, int) dir, GomokuPlayer player) {
-    int count = 0;
-    for (int i = 1; i < 5; i++) {
-      final r = pos.$1 + dir.$1 * i;
-      final c = pos.$2 + dir.$2 * i;
-      if (r < 0 || c < 0 || r >= GomokuModel.size || c >= GomokuModel.size) {
-        break;
-      }
-      if (board[r][c] == player) {
-        count++;
-      } else {
-        break;
-      }
+    int count = 1; // the cell itself
+    int openEnds = 0;
+
+    // Count in positive direction
+    int r = pos.$1 + dir.$1, c = pos.$2 + dir.$2;
+    while (r >= 0 &&
+        c >= 0 &&
+        r < GomokuModel.size &&
+        c < GomokuModel.size &&
+        board[r][c] == player) {
+      count++;
+      r += dir.$1;
+      c += dir.$2;
     }
-    for (int i = 1; i < 5; i++) {
-      final r = pos.$1 - dir.$1 * i;
-      final c = pos.$2 - dir.$2 * i;
-      if (r < 0 || c < 0 || r >= GomokuModel.size || c >= GomokuModel.size) {
-        break;
-      }
-      if (board[r][c] == player) {
-        count++;
-      } else {
-        break;
-      }
+    // Check if positive end is open
+    if (r >= 0 &&
+        c >= 0 &&
+        r < GomokuModel.size &&
+        c < GomokuModel.size &&
+        board[r][c] == null) {
+      openEnds++;
     }
+
+    // Count in negative direction
+    r = pos.$1 - dir.$1;
+    c = pos.$2 - dir.$2;
+    while (r >= 0 &&
+        c >= 0 &&
+        r < GomokuModel.size &&
+        c < GomokuModel.size &&
+        board[r][c] == player) {
+      count++;
+      r -= dir.$1;
+      c -= dir.$2;
+    }
+    // Check if negative end is open
+    if (r >= 0 &&
+        c >= 0 &&
+        r < GomokuModel.size &&
+        c < GomokuModel.size &&
+        board[r][c] == null) {
+      openEnds++;
+    }
+
+    // A run of 5+ is already a win; score very high
+    if (count >= 5) return 200000;
+
+    // Score by run length × open-end multiplier
     return switch (count) {
-      >= 4 => 10000,
-      3 => 1000,
-      2 => 100,
-      1 => 10,
+      4 => openEnds == 2 ? 50000 : openEnds == 1 ? 10000 : 100,
+      3 => openEnds == 2 ? 5000 : openEnds == 1 ? 1000 : 50,
+      2 => openEnds == 2 ? 500 : openEnds == 1 ? 100 : 10,
+      1 => openEnds == 2 ? 50 : openEnds == 1 ? 10 : 1,
       _ => 0,
     };
   }
@@ -177,11 +281,13 @@ class _GomokuBoardState extends State<GomokuBoard> {
       final winner = state.winner == GomokuPlayer.black ? 'Black' : 'White';
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        HapticService.onGameOver();
         widget.onGameOver?.call('$winner wins!');
       });
     } else if (state is GomokuDraw) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        HapticService.onGameOver();
         widget.onGameOver?.call('It\'s a draw!');
       });
     }
@@ -196,6 +302,19 @@ class _GomokuBoardState extends State<GomokuBoard> {
     if (row < 0 || row >= GomokuModel.size) return;
     if (col < 0 || col >= GomokuModel.size) return;
     _onTap(row, col);
+  }
+
+  void _pushStateNotifier() {
+    widget.stateNotifier?.value = _game.toJson();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _game = widget.initialState != null
+        ? GomokuModel.fromJson(widget.initialState!)
+        : GomokuModel();
+    _updateUndoNotifier();
   }
 
   @override

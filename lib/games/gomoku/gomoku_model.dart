@@ -44,6 +44,46 @@ class GomokuModel {
     state = const GomokuPlaying();
   }
 
+  Map<String, dynamic> toJson() => {
+        'board': _board
+            .map((row) => row.map((c) => c?.index).toList())
+            .toList(),
+        'current': current.index,
+        'state': _stateToJson(state),
+      };
+
+  static Map<String, dynamic> _stateToJson(GomokuState s) {
+    if (s is GomokuWin) return {'type': 'win', 'winner': s.winner.index};
+    if (s is GomokuDraw) return {'type': 'draw'};
+    return {'type': 'playing'};
+  }
+
+  static GomokuModel fromJson(Map<String, dynamic> json) {
+    final model = GomokuModel();
+    final board = json['board'] as List;
+    for (int r = 0; r < GomokuModel.size; r++) {
+      final row = board[r] as List;
+      for (int c = 0; c < GomokuModel.size; c++) {
+        model._board[r][c] =
+            row[c] == null ? null : GomokuPlayer.values[row[c] as int];
+      }
+    }
+    model.current = GomokuPlayer.values[json['current'] as int];
+    model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
+    return model;
+  }
+
+  static GomokuState _stateFromJson(Map<String, dynamic> s) {
+    switch (s['type'] as String) {
+      case 'win':
+        return GomokuWin(GomokuPlayer.values[s['winner'] as int]);
+      case 'draw':
+        return const GomokuDraw();
+      default:
+        return const GomokuPlaying();
+    }
+  }
+
   bool play(int row, int col) {
     if (state is! GomokuPlaying) return false;
     if (_board[row][col] != null) return false;

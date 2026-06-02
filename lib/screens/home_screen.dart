@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
 
-enum GameType { gomoku, othello, checkers, dotsAndBoxes }
+enum GameType { gomoku, othello, checkers, dotsAndBoxes, tictactoe }
 
 class _GameInfo {
   final String title;
@@ -55,6 +55,14 @@ const _games = [
     color: Color(0xFF607D8B),
     gameType: GameType.dotsAndBoxes,
     description: 'Draw lines between dots to complete boxes on a 5×5 grid.',
+  ),
+  _GameInfo(
+    title: 'Tic Tac Toe',
+    subtitle: 'X vs O',
+    icon: Icons.grid_3x3_rounded,
+    color: Color(0xFF7B61FF),
+    gameType: GameType.tictactoe,
+    description: 'Get 3 or 4 in a row — choose 3×3, 4×4, or 5×5 board.',
   ),
 ];
 
