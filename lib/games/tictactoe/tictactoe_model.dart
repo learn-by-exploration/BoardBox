@@ -22,8 +22,8 @@ final class TicTacToeDraw extends TicTacToeState {
 
 class TicTacToeModel {
   /// Win length for a given board size:
-  /// 3×3 → 3-in-a-row, 4×4 and 5×5 → 4-in-a-row.
-  static int winLengthFor(int size) => size == 3 ? 3 : 4;
+  /// 3×3 and 4×4 → 3-in-a-row, 5×5 → 4-in-a-row.
+  static int winLengthFor(int size) => size < 5 ? 3 : 4;
 
   final int size;
   final int winLength;

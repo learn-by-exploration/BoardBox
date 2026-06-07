@@ -11,6 +11,7 @@ class DotsBoard extends StatefulWidget {
   const DotsBoard({
     super.key,
     required this.mode,
+    this.boardSize = 5,
     this.difficulty = AiDifficulty.medium,
     this.onGameOver,
     this.undoNotifier,
@@ -19,6 +20,7 @@ class DotsBoard extends StatefulWidget {
   });
 
   final GameMode mode;
+  final int boardSize;
   final AiDifficulty difficulty;
   final void Function(String result)? onGameOver;
   final ValueNotifier<VoidCallback?>? undoNotifier;
@@ -61,7 +63,7 @@ class _DotsBoardState extends State<DotsBoard> {
     super.initState();
     _game = widget.initialState != null
         ? DotsModel.fromJson(widget.initialState!)
-        : DotsModel();
+        : DotsModel(gridSize: widget.boardSize);
   }
 
   void _scheduleAiMove() {
@@ -83,13 +85,13 @@ class _DotsBoardState extends State<DotsBoard> {
   void _playAiMove() {
     if (!mounted) return;
     final available = <(int, int, int)>[];
-    for (int r = 0; r < DotsModel.dotRows; r++) {
-      for (int c = 0; c < DotsModel.dotCols - 1; c++) {
+    for (int r = 0; r < _game.dotRows; r++) {
+      for (int c = 0; c < _game.dotCols - 1; c++) {
         if (_game.hLines[r][c] == null) available.add((0, r, c));
       }
     }
-    for (int r = 0; r < DotsModel.dotRows - 1; r++) {
-      for (int c = 0; c < DotsModel.dotCols; c++) {
+    for (int r = 0; r < _game.dotRows - 1; r++) {
+      for (int c = 0; c < _game.dotCols; c++) {
         if (_game.vLines[r][c] == null) available.add((1, r, c));
       }
     }
@@ -138,7 +140,7 @@ class _DotsBoardState extends State<DotsBoard> {
             (_game.vLines[r - 1][c + 1] != null ? 1 : 0);
         if (sides == 3) return true;
       }
-      if (r < DotsModel.boxRows) {
+      if (r < _game.boxRows) {
         final sides =
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c] != null ? 1 : 0) +
@@ -153,7 +155,7 @@ class _DotsBoardState extends State<DotsBoard> {
             (_game.vLines[r][c - 1] != null ? 1 : 0);
         if (sides == 3) return true;
       }
-      if (c < DotsModel.boxCols) {
+      if (c < _game.boxCols) {
         final sides =
             (_game.hLines[r][c] != null ? 1 : 0) +
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
@@ -176,7 +178,7 @@ class _DotsBoardState extends State<DotsBoard> {
             (_game.vLines[r - 1][c + 1] != null ? 1 : 0);
         if (sides == 2) return true;
       }
-      if (r < DotsModel.boxRows) {
+      if (r < _game.boxRows) {
         final sides =
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
             (_game.vLines[r][c] != null ? 1 : 0) +
@@ -191,7 +193,7 @@ class _DotsBoardState extends State<DotsBoard> {
             (_game.vLines[r][c - 1] != null ? 1 : 0);
         if (sides == 2) return true;
       }
-      if (c < DotsModel.boxCols) {
+      if (c < _game.boxCols) {
         final sides =
             (_game.hLines[r][c] != null ? 1 : 0) +
             (_game.hLines[r + 1][c] != null ? 1 : 0) +
@@ -284,8 +286,8 @@ class _DotsBoardState extends State<DotsBoard> {
       return;
     }
 
-    final cellW = paintSize / (DotsModel.dotCols - 1);
-    final cellH = paintSize / (DotsModel.dotRows - 1);
+    final cellW = paintSize / (_game.dotCols - 1);
+    final cellH = paintSize / (_game.dotRows - 1);
     final gridX = dx / cellW;
     final gridY = dy / cellH;
     final fracX = gridX - gridX.floor();
@@ -295,13 +297,13 @@ class _DotsBoardState extends State<DotsBoard> {
     if (fracY < 0.25 || fracY > 0.75) {
       final lineRow = gridY.round();
       final lineCol = gridX.floor();
-      if (lineCol >= 0 && lineCol < DotsModel.dotCols - 1) {
+      if (lineCol >= 0 && lineCol < _game.dotCols - 1) {
         acted = _game.drawHLine(lineRow, lineCol);
       }
     } else if (fracX < 0.25 || fracX > 0.75) {
       final lineRow = gridY.floor();
       final lineCol = gridX.round();
-      if (lineRow >= 0 && lineRow < DotsModel.dotRows - 1) {
+      if (lineRow >= 0 && lineRow < _game.dotRows - 1) {
         acted = _game.drawVLine(lineRow, lineCol);
       }
     } else {
@@ -312,13 +314,13 @@ class _DotsBoardState extends State<DotsBoard> {
       if (distToHLine < distToVLine) {
         final lineRow = nearestRow;
         final lineCol = gridX.floor();
-        if (lineCol >= 0 && lineCol < DotsModel.dotCols - 1) {
+        if (lineCol >= 0 && lineCol < _game.dotCols - 1) {
           acted = _game.drawHLine(lineRow, lineCol);
         }
       } else {
         final lineRow = gridY.floor();
         final lineCol = nearestCol;
-        if (lineRow >= 0 && lineRow < DotsModel.dotRows - 1) {
+        if (lineRow >= 0 && lineRow < _game.dotRows - 1) {
           acted = _game.drawVLine(lineRow, lineCol);
         }
       }
@@ -343,16 +345,16 @@ class _DotsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cellW = size.width / (DotsModel.dotCols - 1);
-    final cellH = size.height / (DotsModel.dotRows - 1);
+    final cellW = size.width / (game.dotCols - 1);
+    final cellH = size.height / (game.dotRows - 1);
 
     final dotPaint = Paint()
       ..color = Colors.grey.shade800
       ..style = PaintingStyle.fill;
 
     // Captured boxes
-    for (int r = 0; r < DotsModel.boxRows; r++) {
-      for (int c = 0; c < DotsModel.boxCols; c++) {
+    for (int r = 0; r < game.boxRows; r++) {
+      for (int c = 0; c < game.boxCols; c++) {
         final owner = game.boxes[r][c];
         if (owner == null) continue;
         final fill = Paint()
@@ -366,8 +368,8 @@ class _DotsPainter extends CustomPainter {
     }
 
     // Horizontal lines (coloured by owner)
-    for (int r = 0; r < DotsModel.dotRows; r++) {
-      for (int c = 0; c < DotsModel.dotCols - 1; c++) {
+    for (int r = 0; r < game.dotRows; r++) {
+      for (int c = 0; c < game.dotCols - 1; c++) {
         final player = game.hLines[r][c];
         if (player == null) continue;
         final linePaint = Paint()
@@ -383,8 +385,8 @@ class _DotsPainter extends CustomPainter {
     }
 
     // Vertical lines (coloured by owner)
-    for (int r = 0; r < DotsModel.dotRows - 1; r++) {
-      for (int c = 0; c < DotsModel.dotCols; c++) {
+    for (int r = 0; r < game.dotRows - 1; r++) {
+      for (int c = 0; c < game.dotCols; c++) {
         final player = game.vLines[r][c];
         if (player == null) continue;
         final linePaint = Paint()
@@ -400,8 +402,8 @@ class _DotsPainter extends CustomPainter {
     }
 
     // Dots (drawn last, on top)
-    for (int r = 0; r < DotsModel.dotRows; r++) {
-      for (int c = 0; c < DotsModel.dotCols; c++) {
+    for (int r = 0; r < game.dotRows; r++) {
+      for (int c = 0; c < game.dotCols; c++) {
         canvas.drawCircle(Offset(c * cellW, r * cellH), 6, dotPaint);
       }
     }

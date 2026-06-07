@@ -54,8 +54,8 @@ Preserve these rules and add/update model tests for any game-logic change.
 | Gomoku | 15x15 board, black first, five or more contiguous stones currently wins |
 | Othello | 8x8 Reversi, invalid moves rejected, player passes when no valid move exists, game ends when neither player can move |
 | Checkers | 8x8 English draughts, red first, mandatory captures, multi-jump chains, kings move/capture both directions |
-| Dots & Boxes | 5x5 dots, 4x4 boxes, box capture grants another turn, game ends after all boxes are claimed |
-| Tic Tac Toe | 3x3 uses 3-in-a-row, 4x4/5x5 use 4-in-a-row |
+| Dots & Boxes | 5x5, 6x6, or 7x7 dots; box capture grants another turn; game ends after every box is claimed |
+| Tic Tac Toe | 3x3/4x4 use 3-in-a-row, 5x5 uses 4-in-a-row |
 
 Note: `CLAUDE.md` says Gomoku requires exactly five stones and references a
 checkers `mustContinueFrom` field. The current code uses `count >= 5` in

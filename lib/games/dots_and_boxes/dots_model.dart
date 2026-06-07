@@ -1,7 +1,6 @@
 import 'dart:collection';
 
 /// Pure Dart game logic for Dots and Boxes.
-/// 5×5 dot grid (4×4 boxes).
 enum DotsPlayer { player1, player2 }
 
 sealed class DotsState {
@@ -22,10 +21,12 @@ final class DotsDraw extends DotsState {
 }
 
 class DotsModel {
-  static const int dotRows = 5;
-  static const int dotCols = 5;
-  static const int boxRows = dotRows - 1;
-  static const int boxCols = dotCols - 1;
+  final int gridSize;
+
+  int get dotRows => gridSize;
+  int get dotCols => gridSize;
+  int get boxRows => gridSize - 1;
+  int get boxCols => gridSize - 1;
 
   /// hLines[row][col] = player who drew the line, or null if undrawn.
   late List<List<DotsPlayer?>> _hLines;
@@ -41,8 +42,9 @@ class DotsModel {
   int score1;
   int score2;
 
-  DotsModel()
-    : current = DotsPlayer.player1,
+  DotsModel({this.gridSize = 5})
+    : assert(gridSize >= 2),
+      current = DotsPlayer.player1,
       state = const DotsPlaying(),
       score1 = 0,
       score2 = 0 {
@@ -71,6 +73,7 @@ class DotsModel {
   }
 
   Map<String, dynamic> toJson() => {
+    'gridSize': gridSize,
     'hLines': _hLines.map((row) => row.map((c) => c?.index).toList()).toList(),
     'vLines': _vLines.map((row) => row.map((c) => c?.index).toList()).toList(),
     'boxes': _boxes.map((row) => row.map((c) => c?.index).toList()).toList(),
@@ -87,29 +90,31 @@ class DotsModel {
   }
 
   static DotsModel fromJson(Map<String, dynamic> json) {
-    final model = DotsModel();
+    final gridSize =
+        json['gridSize'] as int? ?? (json['hLines'] as List).length;
+    final model = DotsModel(gridSize: gridSize);
     final hLines = json['hLines'] as List;
-    for (int r = 0; r < DotsModel.dotRows; r++) {
+    for (int r = 0; r < model.dotRows; r++) {
       final row = hLines[r] as List;
-      for (int c = 0; c < DotsModel.dotCols - 1; c++) {
+      for (int c = 0; c < model.dotCols - 1; c++) {
         model._hLines[r][c] = row[c] == null
             ? null
             : DotsPlayer.values[row[c] as int];
       }
     }
     final vLines = json['vLines'] as List;
-    for (int r = 0; r < DotsModel.dotRows - 1; r++) {
+    for (int r = 0; r < model.dotRows - 1; r++) {
       final row = vLines[r] as List;
-      for (int c = 0; c < DotsModel.dotCols; c++) {
+      for (int c = 0; c < model.dotCols; c++) {
         model._vLines[r][c] = row[c] == null
             ? null
             : DotsPlayer.values[row[c] as int];
       }
     }
     final boxes = json['boxes'] as List;
-    for (int r = 0; r < DotsModel.boxRows; r++) {
+    for (int r = 0; r < model.boxRows; r++) {
       final row = boxes[r] as List;
-      for (int c = 0; c < DotsModel.boxCols; c++) {
+      for (int c = 0; c < model.boxCols; c++) {
         model._boxes[r][c] = row[c] == null
             ? null
             : DotsPlayer.values[row[c] as int];
@@ -214,7 +219,7 @@ class DotsModel {
   }
 
   void _checkGameOver() {
-    const totalBoxes = boxRows * boxCols;
+    final totalBoxes = boxRows * boxCols;
     if (score1 + score2 == totalBoxes) {
       if (score1 > score2) {
         state = const DotsWin(DotsPlayer.player1);

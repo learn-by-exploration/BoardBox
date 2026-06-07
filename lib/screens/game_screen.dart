@@ -49,9 +49,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? _savedState;
   bool _restoreLoaded = false;
 
-  String get _saveKey => widget.gameType == GameType.tictactoe
-      ? 'game_save_${widget.gameType.name}_${widget.boardSize}'
-      : 'game_save_${widget.gameType.name}';
+  String get _saveKey {
+    if (widget.gameType == GameType.tictactoe) {
+      return 'game_save_${widget.gameType.name}_${widget.boardSize}';
+    }
+    if (widget.gameType == GameType.dotsAndBoxes && widget.boardSize != 5) {
+      return 'game_save_${widget.gameType.name}_${widget.boardSize}';
+    }
+    return 'game_save_${widget.gameType.name}';
+  }
 
   @override
   void initState() {
@@ -214,6 +220,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final modeLabel = widget.mode == GameMode.singlePlayer
         ? 'vs AI (${widget.difficulty.label})'
         : '2 Players';
+    final sizeLabel =
+        widget.gameType == GameType.tictactoe ||
+            widget.gameType == GameType.dotsAndBoxes
+        ? '${widget.boardSize}×${widget.boardSize}'
+        : null;
+    final gameDetailsLabel = sizeLabel == null
+        ? modeLabel
+        : '$sizeLabel · $modeLabel';
 
     return Scaffold(
       appBar: AppBar(
@@ -226,7 +240,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   : Icons.people_outline,
               size: 18,
             ),
-            label: Text(modeLabel),
+            label: Text(gameDetailsLabel),
             visualDensity: VisualDensity.compact,
           ),
           const SizedBox(width: 4),
@@ -292,6 +306,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         return DotsBoard(
           key: ValueKey(_boardKey),
           mode: widget.mode,
+          boardSize: widget.boardSize,
           difficulty: widget.difficulty,
           onGameOver: _onGameOver,
           undoNotifier: _undoNotifier,

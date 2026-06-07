@@ -43,7 +43,9 @@ const _rules = <GameType, _RulesData>{
   ),
   GameType.dotsAndBoxes: _RulesData(
     objective: 'Complete more boxes than your opponent.',
-    board: '5 × 5 dot grid (4 × 4 boxes)',
+    board:
+        'Choose a 5×5, 6×6, or 7×7 dot grid. Larger grids create more boxes '
+        'and longer games.',
     turns:
         'Draw one line per turn between adjacent dots. '
         'Complete a box to claim it and take another turn.',
@@ -55,7 +57,7 @@ const _rules = <GameType, _RulesData>{
   ),
   GameType.tictactoe: _RulesData(
     objective: 'Get your symbols in a row before your opponent does.',
-    board: 'Choose 3×3 (win with 3), 4×4 (win with 4), or 5×5 (win with 4).',
+    board: 'Choose 3×3 (win with 3), 4×4 (win with 3), or 5×5 (win with 4).',
     turns:
         'X always goes first. Players alternate placing one symbol per turn.',
     tips: [
@@ -95,7 +97,13 @@ class ModeSelectScreen extends StatefulWidget {
 }
 
 class _ModeSelectScreenState extends State<ModeSelectScreen> {
-  int _boardSize = 3;
+  late int _boardSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _boardSize = widget.gameType == GameType.dotsAndBoxes ? 5 : 3;
+  }
 
   void _startGame(
     BuildContext context,
@@ -110,7 +118,11 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
           title: widget.title,
           mode: mode,
           difficulty: difficulty,
-          boardSize: widget.gameType == GameType.tictactoe ? _boardSize : 3,
+          boardSize:
+              widget.gameType == GameType.tictactoe ||
+                  widget.gameType == GameType.dotsAndBoxes
+              ? _boardSize
+              : 3,
         ),
       ),
     );
@@ -221,6 +233,45 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
                   selected: {_boardSize},
                   onSelectionChanged: (s) =>
                       setState(() => _boardSize = s.first),
+                ),
+                const SizedBox(height: 24),
+              ],
+              if (widget.gameType == GameType.dotsAndBoxes) ...[
+                Text(
+                  'Grid Size',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_boardSize - 1} × ${_boardSize - 1} boxes',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 5,
+                      icon: Icon(Icons.grid_4x4_rounded),
+                      label: Text('5 × 5'),
+                    ),
+                    ButtonSegment(
+                      value: 6,
+                      icon: Icon(Icons.grid_on_rounded),
+                      label: Text('6 × 6'),
+                    ),
+                    ButtonSegment(
+                      value: 7,
+                      icon: Icon(Icons.apps_rounded),
+                      label: Text('7 × 7'),
+                    ),
+                  ],
+                  selected: {_boardSize},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _boardSize = selection.first),
                 ),
                 const SizedBox(height: 24),
               ],

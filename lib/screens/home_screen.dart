@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
+import 'package:common_games/services/game_stats.dart';
 
 enum GameType { gomoku, othello, checkers, dotsAndBoxes, tictactoe }
 
@@ -56,7 +57,7 @@ const _games = [
     icon: Icons.border_all,
     color: Color(0xFF607D8B),
     gameType: GameType.dotsAndBoxes,
-    description: 'Draw lines between dots to complete boxes on a 5×5 grid.',
+    description: 'Draw lines and claim boxes on a 5×5, 6×6, or 7×7 grid.',
   ),
   _GameInfo(
     title: 'Tic Tac Toe',
@@ -68,19 +69,111 @@ const _games = [
   ),
 ];
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  bool _showGrid = true;
+  String _query = '';
+
+  List<_GameInfo> get _visibleGames {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return _games;
+    return _games
+        .where(
+          (game) =>
+              game.title.toLowerCase().contains(query) ||
+              game.subtitle.toLowerCase().contains(query) ||
+              game.description.toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      if (_isSearching) {
+        _searchController.clear();
+        _query = '';
+      }
+      _isSearching = !_isSearching;
+    });
+  }
+
+  Future<void> _openGame(_GameInfo info) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            ModeSelectScreen(gameType: info.gameType, title: info.title),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final visibleGames = _visibleGames;
 
     return Scaffold(
+      floatingActionButton: _isSearching
+          ? SizedBox(
+              width: 300,
+              child: Material(
+                elevation: 6,
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(28),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Search games',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: IconButton(
+                      key: const ValueKey('home_search_close_button'),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: 'Close search',
+                      onPressed: _toggleSearch,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  textInputAction: TextInputAction.search,
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+              ),
+            )
+          : FloatingActionButton(
+              key: const ValueKey('home_search_button'),
+              tooltip: 'Search games',
+              onPressed: _toggleSearch,
+              child: const Icon(Icons.search_rounded),
+            ),
       body: CustomScrollView(
         slivers: [
-          SliverAppBar.large(
-            title: const Text('Board Box'),
+          SliverAppBar(
+            pinned: true,
             actions: [
+              IconButton(
+                key: const ValueKey('home_layout_button'),
+                icon: Icon(
+                  _showGrid ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                ),
+                tooltip: _showGrid ? 'Show list' : 'Show grid',
+                onPressed: () => setState(() => _showGrid = !_showGrid),
+              ),
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Settings',
@@ -100,34 +193,92 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.75,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _GameTile(info: _games[index]),
-                childCount: _games.length,
-              ),
-            ),
-          ),
+          SliverToBoxAdapter(child: _RecordSummary(stats: GameStats.instance)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Center(
-                child: Text(
-                  'Tap a game to start playing',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+              child: Row(
+                children: [
+                  Text(
+                    'Choose a game',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                  const Spacer(),
+                  Text(
+                    '${visibleGames.length} '
+                    '${visibleGames.length == 1 ? "game" : "games"}',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+          if (visibleGames.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 56),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.search_off_rounded,
+                      size: 48,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No games found',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_showGrid)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverLayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.crossAxisExtent >= 900
+                      ? 4
+                      : constraints.crossAxisExtent >= 600
+                      ? 3
+                      : 2;
+                  return SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: columns == 2 ? 0.82 : 0.9,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _GameTile(
+                        info: visibleGames[index],
+                        onTap: () => _openGame(visibleGames[index]),
+                      ),
+                      childCount: visibleGames.length,
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+              sliver: SliverList.separated(
+                itemCount: visibleGames.length,
+                itemBuilder: (context, index) => _GameListTile(
+                  info: visibleGames[index],
+                  onTap: () => _openGame(visibleGames[index]),
+                ),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+              ),
+            ),
+          if (_showGrid && visibleGames.isNotEmpty)
+            const SliverToBoxAdapter(child: SizedBox(height: 64)),
         ],
       ),
     );
@@ -160,14 +311,238 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _GameTile extends StatelessWidget {
-  final _GameInfo info;
+class _GameRecord {
+  const _GameRecord({
+    required this.wins,
+    required this.draws,
+    required this.losses,
+  });
 
-  const _GameTile({required this.info});
+  final int wins;
+  final int draws;
+  final int losses;
+
+  int get played => wins + draws + losses;
+
+  String get label =>
+      played == 0 ? 'No matches yet' : '$wins W  ·  $draws D  ·  $losses L';
+
+  static _GameRecord read(GameType gameType) {
+    final stats = GameStats.instance;
+    return _GameRecord(
+      wins: stats.getTotalWins(gameType),
+      draws: stats.getTotalDraws(gameType),
+      losses: stats.getTotalLosses(gameType),
+    );
+  }
+}
+
+class _GameListTile extends StatelessWidget {
+  const _GameListTile({required this.info, required this.onTap});
+
+  final _GameInfo info;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final record = _GameRecord.read(info.gameType);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: info.color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(info.icon, color: info.color, size: 27),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      info.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      info.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      record.label,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: record.played == 0
+                            ? colorScheme.onSurfaceVariant
+                            : info.color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: info.color),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordSummary extends StatelessWidget {
+  const _RecordSummary({required this.stats});
+
+  final GameStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final wins = stats.getAllGamesWins();
+    final losses = stats.getAllGamesLosses();
+    final draws = stats.getAllGamesDraws();
+    final played = wins + losses + draws;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colorScheme.primaryContainer, colorScheme.tertiaryContainer],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.sports_esports_rounded,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your board game collection',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      played == 0
+                          ? 'Pick a game and start your first match'
+                          : '$played single-player matches completed',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _RecordValue(
+                  label: 'Wins',
+                  value: wins,
+                  color: const Color(0xFF2E7D32),
+                ),
+              ),
+              Expanded(
+                child: _RecordValue(
+                  label: 'Draws',
+                  value: draws,
+                  color: colorScheme.tertiary,
+                ),
+              ),
+              Expanded(
+                child: _RecordValue(
+                  label: 'Losses',
+                  value: losses,
+                  color: colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordValue extends StatelessWidget {
+  const _RecordValue({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          '$value',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+      ],
+    );
+  }
+}
+
+class _GameTile extends StatelessWidget {
+  final _GameInfo info;
+  final VoidCallback onTap;
+
+  const _GameTile({required this.info, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final record = _GameRecord.read(info.gameType);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -181,15 +556,7 @@ class _GameTile extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push<void>(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) =>
-                  ModeSelectScreen(gameType: info.gameType, title: info.title),
-            ),
-          );
-        },
+        onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -205,49 +572,77 @@ class _GameTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: info.color.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: info.color.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: info.color.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  ],
-                ),
-                child: Icon(info.icon, color: info.color, size: 28),
+                    child: Icon(info.icon, color: info.color, size: 27),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: info.color,
+                    size: 20,
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              Text(
-                info.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
+              const Spacer(),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  info.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               const SizedBox(height: 2),
-              Text(
-                info.subtitle,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: info.color,
-                  fontWeight: FontWeight.w500,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  info.subtitle,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: info.color,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 info.description,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
-                textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  record.label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: record.played == 0
+                        ? colorScheme.onSurfaceVariant
+                        : info.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ],
           ),

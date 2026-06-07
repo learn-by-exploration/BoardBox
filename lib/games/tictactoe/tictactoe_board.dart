@@ -35,6 +35,7 @@ class TicTacToeBoard extends StatefulWidget {
 class _TicTacToeBoardState extends State<TicTacToeBoard> {
   late TicTacToeModel _game;
   bool _aiThinking = false;
+  (int, int)? _lastAiMove;
   final List<Map<String, dynamic>> _history = [];
   final Random _rng = Random();
 
@@ -60,8 +61,18 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
     _game = widget.initialState != null
         ? TicTacToeModel.fromJson(widget.initialState!)
         : TicTacToeModel(size: widget.boardSize);
+    _lastAiMove = _lastMoveFor(TicTacToePlayer.o);
     _updateUndoNotifier();
     _pushStateNotifier();
+  }
+
+  (int, int)? _lastMoveFor(TicTacToePlayer player) {
+    final row = _game.lastRow;
+    final col = _game.lastCol;
+    if (row == null || col == null || _game.board[row][col] != player) {
+      return null;
+    }
+    return (row, col);
   }
 
   void _pushHistory() {
@@ -78,6 +89,7 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
     setState(() {
       _game = TicTacToeModel.fromJson(snapshot);
       _aiThinking = false;
+      _lastAiMove = _lastMoveFor(TicTacToePlayer.o);
     });
     _updateUndoNotifier();
     _pushStateNotifier();
@@ -161,6 +173,7 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
 
     setState(() {
       _game.play(pick.$1, pick.$2);
+      _lastAiMove = pick;
       _aiThinking = false;
     });
     HapticService.onMove();
@@ -273,11 +286,16 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
                       final row = index ~/ widget.boardSize;
                       final col = index % widget.boardSize;
                       final piece = _game.board[row][col];
-                      final isLastMove =
-                          _game.lastRow == row && _game.lastCol == col;
+                      final isHighlightedMove =
+                          widget.mode == GameMode.singlePlayer
+                          ? _lastAiMove == (row, col)
+                          : _game.lastRow == row && _game.lastCol == col;
                       return _TicTacToeCell(
                         piece: piece,
-                        isLastMove: isLastMove,
+                        isHighlightedMove: isHighlightedMove,
+                        isAiMove:
+                            widget.mode == GameMode.singlePlayer &&
+                            _lastAiMove == (row, col),
                         onTap: () => _onTap(row, col),
                         row: row,
                         col: col,
@@ -299,14 +317,16 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
 class _TicTacToeCell extends StatelessWidget {
   const _TicTacToeCell({
     required this.piece,
-    required this.isLastMove,
+    required this.isHighlightedMove,
+    required this.isAiMove,
     required this.onTap,
     required this.row,
     required this.col,
   });
 
   final TicTacToePlayer? piece;
-  final bool isLastMove;
+  final bool isHighlightedMove;
+  final bool isAiMove;
   final VoidCallback onTap;
   final int row;
   final int col;
@@ -314,15 +334,17 @@ class _TicTacToeCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bg = isLastMove && piece != null
-        ? colorScheme.primaryContainer.withValues(alpha: 0.4)
+    final bg = isHighlightedMove && piece != null
+        ? colorScheme.tertiaryContainer.withValues(alpha: 0.65)
         : colorScheme.surface;
 
     final String label;
     if (piece == TicTacToePlayer.x) {
       label = 'X at row ${row + 1} column ${col + 1}';
     } else if (piece == TicTacToePlayer.o) {
-      label = 'O at row ${row + 1} column ${col + 1}';
+      label =
+          '${isAiMove ? "AI last move, " : ""}'
+          'O at row ${row + 1} column ${col + 1}';
     } else {
       label = 'Empty row ${row + 1} column ${col + 1}';
     }
@@ -338,7 +360,10 @@ class _TicTacToeCell extends StatelessWidget {
             color: bg,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+              color: isHighlightedMove
+                  ? colorScheme.tertiary
+                  : colorScheme.outlineVariant.withValues(alpha: 0.6),
+              width: isHighlightedMove ? 2 : 1,
             ),
           ),
           child: piece == null

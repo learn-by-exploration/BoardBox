@@ -51,7 +51,7 @@ lib/
 │   ├── gomoku/                # 15×15 board, win on 5-in-a-row
 │   ├── othello/               # 8×8 Reversi with disc-flip logic
 │   ├── checkers/              # 8×8, mandatory captures, multi-jump, king promotion
-│   ├── dots_and_boxes/        # 5×5 dots (4×4 boxes), box-capture bonus turn
+│   ├── dots_and_boxes/        # 5×5–7×7 dots, box-capture bonus turn
 │   └── tictactoe/             # 3×3, 4×4, or 5×5 boards
 ├── services/
 │   ├── game_stats.dart        # SharedPreferences-backed win/loss/draw counts
@@ -100,7 +100,7 @@ AI difficulty logic (`_easyMove`, `_mediumMove`, `_hardMove`) is in each
 | **Othello** | 8×8; player must pass if no valid moves; game ends when neither player can move |
 | **Checkers** | Mandatory captures; multi-jump chains must complete; red moves first; kings move/capture both directions |
 | **Dots & Boxes** | Completing a box grants an extra turn; game ends when all boxes are claimed |
-| **Tic Tac Toe** | 3×3 wins with 3; 4×4 and 5×5 win with 4; X moves first |
+| **Tic Tac Toe** | 3×3 and 4×4 win with 3; 5×5 wins with 4; X moves first |
 
 Write a model test for any change to game logic. Failing these silently would
 ship a broken game.

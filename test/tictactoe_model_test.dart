@@ -94,29 +94,17 @@ void main() {
   });
 
   group('TicTacToeModel — 4×4', () {
-    test('win length is 4', () {
-      expect(TicTacToeModel.winLengthFor(4), 4);
+    test('win length is 3', () {
+      expect(TicTacToeModel.winLengthFor(4), 3);
     });
 
-    test('3 in a row does NOT win on 4×4', () {
+    test('3 in a row wins on 4×4', () {
       final m = TicTacToeModel(size: 4);
       m.play(0, 0);
       m.play(1, 0);
       m.play(0, 1);
       m.play(1, 1);
-      m.play(0, 2); // X has 3 in a row — should still be Playing
-      expect(m.state, isA<TicTacToePlaying>());
-    });
-
-    test('4 in a row wins on 4×4', () {
-      final m = TicTacToeModel(size: 4);
-      m.play(0, 0);
-      m.play(1, 0);
-      m.play(0, 1);
-      m.play(1, 1);
-      m.play(0, 2);
-      m.play(1, 2);
-      m.play(0, 3); // X wins row 0
+      m.play(0, 2); // X wins row 0
       expect(m.state, isA<TicTacToeWin>());
     });
   });

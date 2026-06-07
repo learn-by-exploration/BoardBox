@@ -42,5 +42,40 @@ void main() {
       expect(game.score2, 0);
       expect(game.current, DotsPlayer.player1);
     });
+
+    test('supports a 7×7 dot grid', () {
+      final largeGame = DotsModel(gridSize: 7);
+
+      expect(largeGame.dotRows, 7);
+      expect(largeGame.dotCols, 7);
+      expect(largeGame.boxRows, 6);
+      expect(largeGame.boxCols, 6);
+      expect(largeGame.hLines.length, 7);
+      expect(largeGame.hLines.first.length, 6);
+      expect(largeGame.vLines.length, 6);
+      expect(largeGame.vLines.first.length, 7);
+      expect(largeGame.boxes.length, 6);
+      expect(largeGame.boxes.first.length, 6);
+      expect(largeGame.drawHLine(6, 5), isTrue);
+      expect(largeGame.drawVLine(5, 6), isTrue);
+    });
+
+    test('serialization preserves the selected grid size', () {
+      final largeGame = DotsModel(gridSize: 6);
+      largeGame.drawHLine(0, 0);
+
+      final restored = DotsModel.fromJson(largeGame.toJson());
+
+      expect(restored.gridSize, 6);
+      expect(restored.hLines[0][0], DotsPlayer.player1);
+    });
+
+    test('legacy saves infer their grid size from line data', () {
+      final json = DotsModel().toJson()..remove('gridSize');
+
+      final restored = DotsModel.fromJson(json);
+
+      expect(restored.gridSize, 5);
+    });
   });
 }
