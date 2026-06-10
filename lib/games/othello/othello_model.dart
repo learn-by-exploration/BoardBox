@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:common_games/models/json_helpers.dart';
+
 /// Pure Dart game logic for Othello (Reversi).
 /// Reference: https://github.com/nicoseng/othello_flutter (flip mechanics)
 enum OthelloPlayer { black, white }
@@ -82,16 +84,27 @@ class OthelloModel {
         model._board[r][c] = null;
       }
     }
-    final board = json['board'] as List;
+    final board = readBoard<int>(
+      json,
+      'board',
+      expectedOuter: OthelloModel.size,
+      expectedInner: OthelloModel.size,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < OthelloPlayer.values.length,
+    );
     for (int r = 0; r < OthelloModel.size; r++) {
-      final row = board[r] as List;
       for (int c = 0; c < OthelloModel.size; c++) {
-        model._board[r][c] = row[c] == null
+        model._board[r][c] = board[r][c] == null
             ? null
-            : OthelloPlayer.values[row[c] as int];
+            : OthelloPlayer.values[board[r][c]!];
       }
     }
-    model.current = OthelloPlayer.values[json['current'] as int];
+    model.current = readEnumByIndex<OthelloPlayer>(
+      OthelloPlayer.values,
+      json,
+      'current',
+      enumName: 'OthelloPlayer',
+    );
     model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
     model.blackCount = json['blackCount'] as int;
     model.whiteCount = json['whiteCount'] as int;
@@ -99,14 +112,21 @@ class OthelloModel {
   }
 
   static OthelloState _stateFromJson(Map<String, dynamic> s) {
-    switch (s['type'] as String) {
-      case 'win':
-        return OthelloWin(OthelloPlayer.values[s['winner'] as int]);
-      case 'draw':
-        return const OthelloDraw();
-      default:
-        return const OthelloPlaying();
-    }
+    return readStateType<OthelloState>(
+      stateJson: s,
+      cases: {
+        'win': (j) => OthelloWin(
+          readEnumByIndex<OthelloPlayer>(
+            OthelloPlayer.values,
+            j,
+            'winner',
+            enumName: 'OthelloPlayer',
+          ),
+        ),
+        'draw': (_) => const OthelloDraw(),
+        'playing': (_) => const OthelloPlaying(),
+      },
+    );
   }
 
   bool play(int row, int col) {
@@ -125,6 +145,34 @@ class OthelloModel {
     _updateCounts();
     _advance();
     return true;
+  }
+
+  /// Ensures the current player has at least one valid move, and declares a
+  /// winner if neither player can move. Call after state restoration and
+  /// after any non-mutating transition that may have left `current` with no
+  /// moves (e.g., the human's last move in a position where only the opponent
+  /// can flip, after which the opponent's turn is set, etc.).
+  void ensureValidTurn() {
+    if (state is! OthelloPlaying) return;
+    if (_hasValidMoves(current)) return;
+    final opponent = current == OthelloPlayer.black
+        ? OthelloPlayer.white
+        : OthelloPlayer.black;
+    if (_hasValidMoves(opponent)) {
+      current = opponent;
+      return;
+    }
+    _declareFinalResult();
+  }
+
+  void _declareFinalResult() {
+    if (blackCount > whiteCount) {
+      state = const OthelloWin(OthelloPlayer.black);
+    } else if (whiteCount > blackCount) {
+      state = const OthelloWin(OthelloPlayer.white);
+    } else {
+      state = const OthelloDraw();
+    }
   }
 
   List<List<int>> getValidMoves() {
@@ -157,13 +205,7 @@ class OthelloModel {
     }
 
     // Neither has moves — game over
-    if (blackCount > whiteCount) {
-      state = const OthelloWin(OthelloPlayer.black);
-    } else if (whiteCount > blackCount) {
-      state = const OthelloWin(OthelloPlayer.white);
-    } else {
-      state = const OthelloDraw();
-    }
+    _declareFinalResult();
   }
 
   bool _hasValidMoves(OthelloPlayer player) {

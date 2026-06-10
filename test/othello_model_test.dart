@@ -50,5 +50,39 @@ void main() {
       expect(game.whiteCount, 2);
       expect(game.current, OthelloPlayer.black);
     });
+
+    test('ensureValidTurn keeps current player when they have moves', () {
+      game.ensureValidTurn();
+      expect(game.current, OthelloPlayer.black);
+      expect(game.state, isA<OthelloPlaying>());
+    });
+
+    test('fromJson rejects out-of-range enum index with FormatException', () {
+      final json = OthelloModel().toJson();
+      json['current'] = 99; // forward-compat / corrupt save
+      expect(
+        () => OthelloModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('fromJson rejects truncated board with FormatException', () {
+      final json = OthelloModel().toJson();
+      // Truncate to 3 rows
+      json['board'] = (json['board'] as List).sublist(0, 3);
+      expect(
+        () => OthelloModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('fromJson rejects unknown state type with FormatException', () {
+      final json = OthelloModel().toJson();
+      json['state'] = {'type': 'unknown_future_state'};
+      expect(
+        () => OthelloModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
   });
 }

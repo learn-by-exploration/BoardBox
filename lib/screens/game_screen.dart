@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -50,13 +51,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _restoreLoaded = false;
 
   String get _saveKey {
-    if (widget.gameType == GameType.tictactoe) {
-      return 'game_save_${widget.gameType.name}_${widget.boardSize}';
-    }
-    if (widget.gameType == GameType.dotsAndBoxes && widget.boardSize != 5) {
-      return 'game_save_${widget.gameType.name}_${widget.boardSize}';
-    }
-    return 'game_save_${widget.gameType.name}';
+    // Encode mode + difficulty so switching difficulty / mode in
+    // single-player doesn't restore a stale board from a previous session.
+    final sizePart =
+        widget.gameType == GameType.tictactoe ||
+            widget.gameType == GameType.dotsAndBoxes
+        ? '_${widget.boardSize}'
+        : '';
+    return 'game_save_'
+        '${widget.gameType.name}_'
+        '${widget.mode.name}_'
+        '${widget.difficulty.name}'
+        '$sizePart';
   }
 
   @override
@@ -76,8 +82,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // On Android, `paused` and `detached` fire in quick succession when the OS
+    // kills the process. Removing the save on `detached` raced with the
+    // `paused` save and erased the user's in-progress game. Save on pause,
+    // and only clear when the user explicitly restarts.
     if (state == AppLifecycleState.paused) _saveGame();
-    if (state == AppLifecycleState.detached) _clearSave();
   }
 
   Future<void> _tryRestoreGame() async {
@@ -129,13 +138,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  void _recordStat(String result) {
+  Future<void> _recordStat(String result) {
     final lower = result.toLowerCase();
     final isDraw = lower.contains('draw') || lower.contains('tie');
 
     if (isDraw) {
-      GameStats.instance.recordDraw(widget.gameType, widget.difficulty);
-      return;
+      return GameStats.instance.recordDraw(widget.gameType, widget.difficulty);
     }
 
     // Each game assigns human to a specific colour/label.
@@ -152,10 +160,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     };
 
     if (lower.contains(humanWinToken)) {
-      GameStats.instance.recordWin(widget.gameType, widget.difficulty);
-    } else {
-      GameStats.instance.recordLoss(widget.gameType, widget.difficulty);
+      return GameStats.instance.recordWin(widget.gameType, widget.difficulty);
     }
+    return GameStats.instance.recordLoss(widget.gameType, widget.difficulty);
   }
 
   /// Called by board widgets when the game ends.
@@ -163,9 +170,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted || _gameOverShown) return;
     _gameOverShown = true;
 
-    // Record stats for single-player games.
+    // Record stats for single-player games. Fire-and-forget is safe here:
+    // GameStats awaits its own SharedPreferences write internally and the
+    // stat is durable even if the user navigates away immediately.
     if (widget.mode == GameMode.singlePlayer) {
-      _recordStat(result);
+      unawaited(_recordStat(result));
     }
 
     showDialog<void>(

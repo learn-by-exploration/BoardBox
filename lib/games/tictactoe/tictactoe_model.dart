@@ -1,6 +1,8 @@
 import 'dart:collection';
 import 'dart:math' as math;
 
+import 'package:common_games/models/json_helpers.dart';
+
 enum TicTacToePlayer { x, o }
 
 sealed class TicTacToeState {
@@ -187,16 +189,27 @@ class TicTacToeModel {
   static TicTacToeModel fromJson(Map<String, dynamic> json) {
     final size = json['size'] as int;
     final model = TicTacToeModel(size: size);
-    final board = json['board'] as List;
+    final board = readBoard<int>(
+      json,
+      'board',
+      expectedOuter: size,
+      expectedInner: size,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < TicTacToePlayer.values.length,
+    );
     for (int r = 0; r < size; r++) {
-      final row = board[r] as List;
       for (int c = 0; c < size; c++) {
-        model._board[r][c] = row[c] == null
+        model._board[r][c] = board[r][c] == null
             ? null
-            : TicTacToePlayer.values[row[c] as int];
+            : TicTacToePlayer.values[board[r][c]!];
       }
     }
-    model.current = TicTacToePlayer.values[json['current'] as int];
+    model.current = readEnumByIndex<TicTacToePlayer>(
+      TicTacToePlayer.values,
+      json,
+      'current',
+      enumName: 'TicTacToePlayer',
+    );
     model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
     model.lastRow = json['lastRow'] as int?;
     model.lastCol = json['lastCol'] as int?;
@@ -204,13 +217,20 @@ class TicTacToeModel {
   }
 
   static TicTacToeState _stateFromJson(Map<String, dynamic> s) {
-    switch (s['type'] as String) {
-      case 'win':
-        return TicTacToeWin(TicTacToePlayer.values[s['winner'] as int]);
-      case 'draw':
-        return const TicTacToeDraw();
-      default:
-        return const TicTacToePlaying();
-    }
+    return readStateType<TicTacToeState>(
+      stateJson: s,
+      cases: {
+        'win': (j) => TicTacToeWin(
+          readEnumByIndex<TicTacToePlayer>(
+            TicTacToePlayer.values,
+            j,
+            'winner',
+            enumName: 'TicTacToePlayer',
+          ),
+        ),
+        'draw': (_) => const TicTacToeDraw(),
+        'playing': (_) => const TicTacToePlaying(),
+      },
+    );
   }
 }

@@ -59,6 +59,10 @@ class _OthelloBoardState extends State<OthelloBoard> {
     _game = widget.initialState != null
         ? OthelloModel.fromJson(widget.initialState!)
         : OthelloModel();
+    // A restored or fresh game may have a `current` with no valid moves.
+    // Auto-skip or end the game so the board is never permanently stuck.
+    _game.ensureValidTurn();
+    _pushStateNotifier();
   }
 
   void _onTap(int row, int col) {
@@ -123,6 +127,9 @@ class _OthelloBoardState extends State<OthelloBoard> {
       _game.play(pick[0], pick[1]);
       _aiThinking = false;
     });
+    // After the AI's move the human (Black) may have no flips left.
+    // Hand the turn back to White automatically rather than freezing.
+    _game.ensureValidTurn();
     _pushStateNotifier();
     _checkGameOver();
     _scheduleAiMove();

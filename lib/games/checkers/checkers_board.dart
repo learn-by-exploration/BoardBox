@@ -58,6 +58,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
     _game = widget.initialState != null
         ? CheckersModel.fromJson(widget.initialState!)
         : CheckersModel();
+    _pushStateNotifier();
   }
 
   void _onTap(int row, int col) {

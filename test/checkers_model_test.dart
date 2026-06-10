@@ -54,5 +54,50 @@ void main() {
       expect(game.selectedRow, null);
       expect(game.current, CheckersPlayer.red);
     });
+
+    test('multi-jump that captures all opponent pieces wins immediately', () {
+      // Construct a position where red can chain-capture every black piece.
+      // We test the public contract: after a single tap+execute sequence that
+      // removes the last opponent piece mid-chain, state becomes CheckersWin.
+      // Build a custom board via the JSON path:
+      final customJson = <String, Object?>{
+        'board': [
+          [null, null, null, null, null, null, null, null],
+          [null, null, 'b', null, null, null, null, null],
+          [null, null, null, 'r', null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+        ],
+        'current': 0, // red
+        'state': {'type': 'playing'},
+        'selectedRow': null,
+        'selectedCol': null,
+        'highlightedMoves': <List<int>>[],
+        'midJump': false,
+      };
+      final g = CheckersModel.fromJson(customJson);
+      // Red at (2,3) jumps to (0,1) over (1,2)? No: (2,3) to (0,1) isn't
+      // a valid jump. (2,3) can jump (1,2)→(0,1). After landing at (0,1)
+      // the chain ends. Opponent still has no pieces (only 1 black, captured).
+      // Expect state == CheckersWin(red).
+      // Select piece
+      expect(g.tap(2, 3), true);
+      // Perform the jump
+      expect(g.tap(0, 1), true);
+      expect(g.state, isA<CheckersWin>());
+      expect((g.state as CheckersWin).winner, CheckersPlayer.red);
+    });
+
+    test('fromJson rejects invalid piece character with FormatException', () {
+      final json = CheckersModel().toJson();
+      (json['board'] as List)[0][0] = 'x'; // invalid
+      expect(
+        () => CheckersModel.fromJson(json),
+        throwsA(isA<FormatException>()),
+      );
+    });
   });
 }

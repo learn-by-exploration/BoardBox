@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:common_games/models/json_helpers.dart';
+
 /// Pure Dart game logic for Gomoku (Five in a Row).
 /// No Flutter imports — fully testable.
 /// Reference: https://github.com/nickoala/five-in-a-row (board logic pattern)
@@ -58,29 +60,47 @@ class GomokuModel {
 
   static GomokuModel fromJson(Map<String, dynamic> json) {
     final model = GomokuModel();
-    final board = json['board'] as List;
+    final board = readBoard<int>(
+      json,
+      'board',
+      expectedOuter: GomokuModel.size,
+      expectedInner: GomokuModel.size,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < GomokuPlayer.values.length,
+    );
     for (int r = 0; r < GomokuModel.size; r++) {
-      final row = board[r] as List;
       for (int c = 0; c < GomokuModel.size; c++) {
-        model._board[r][c] = row[c] == null
+        model._board[r][c] = board[r][c] == null
             ? null
-            : GomokuPlayer.values[row[c] as int];
+            : GomokuPlayer.values[board[r][c]!];
       }
     }
-    model.current = GomokuPlayer.values[json['current'] as int];
+    model.current = readEnumByIndex<GomokuPlayer>(
+      GomokuPlayer.values,
+      json,
+      'current',
+      enumName: 'GomokuPlayer',
+    );
     model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
     return model;
   }
 
   static GomokuState _stateFromJson(Map<String, dynamic> s) {
-    switch (s['type'] as String) {
-      case 'win':
-        return GomokuWin(GomokuPlayer.values[s['winner'] as int]);
-      case 'draw':
-        return const GomokuDraw();
-      default:
-        return const GomokuPlaying();
-    }
+    return readStateType<GomokuState>(
+      stateJson: s,
+      cases: {
+        'win': (j) => GomokuWin(
+          readEnumByIndex<GomokuPlayer>(
+            GomokuPlayer.values,
+            j,
+            'winner',
+            enumName: 'GomokuPlayer',
+          ),
+        ),
+        'draw': (_) => const GomokuDraw(),
+        'playing': (_) => const GomokuPlaying(),
+      },
+    );
   }
 
   bool play(int row, int col) {

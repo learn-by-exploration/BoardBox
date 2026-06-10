@@ -330,6 +330,32 @@ class _GomokuBoardState extends State<GomokuBoard> {
     _onTap(row, col);
   }
 
+  /// Builds an accessibility label that summarises the current Gomoku state
+  /// for screen readers (the board is custom-painted, so it has no per-cell
+  /// nodes a screen reader can walk through).
+  String _boardSemanticsLabel() {
+    final state = _game.state;
+    if (state is GomokuWin) {
+      final winner = state.winner == GomokuPlayer.black ? 'Black' : 'White';
+      return 'Gomoku board. $winner has won. Tap to dismiss highlight.';
+    }
+    if (state is GomokuDraw) return 'Gomoku board. The game is a draw.';
+    final turn = _game.current == GomokuPlayer.black ? 'Black' : 'White';
+    return 'Gomoku board. $turn to move. Tap an intersection to play.';
+  }
+
+  /// Pick the first empty intersection for a screen-reader tap.
+  void _handleSemanticsTap() {
+    for (int r = 0; r < GomokuModel.size; r++) {
+      for (int c = 0; c < GomokuModel.size; c++) {
+        if (_game.board[r][c] == null) {
+          _onTap(r, c);
+          return;
+        }
+      }
+    }
+  }
+
   void _pushStateNotifier() {
     widget.stateNotifier?.value = _game.toJson();
   }
@@ -380,11 +406,21 @@ class _GomokuBoardState extends State<GomokuBoard> {
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: LayoutBuilder(
-                    builder: (ctx, constraints) => GestureDetector(
-                      onTapDown: (d) => _handleTap(constraints, d),
-                      child: CustomPaint(
-                        painter: _GomokuPainter(_game, _lastMove),
-                        size: Size(constraints.maxWidth, constraints.maxHeight),
+                    builder: (ctx, constraints) => Semantics(
+                      label: _boardSemanticsLabel(),
+                      button: _game.state is GomokuPlaying,
+                      onTap: _game.state is GomokuPlaying
+                          ? _handleSemanticsTap
+                          : null,
+                      child: GestureDetector(
+                        onTapDown: (d) => _handleTap(constraints, d),
+                        child: CustomPaint(
+                          painter: _GomokuPainter(_game, _lastMove),
+                          size: Size(
+                            constraints.maxWidth,
+                            constraints.maxHeight,
+                          ),
+                        ),
                       ),
                     ),
                   ),

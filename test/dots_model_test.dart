@@ -35,6 +35,26 @@ void main() {
       expect(game.current, DotsPlayer.player2); // extra turn
     });
 
+    test(
+      'completing two boxes with one line scores both and keeps the turn',
+      () {
+        // Set up: box (0,0) needs only its right side; box (0,1) needs only
+        // its left side. The shared line is vLine(0, 1) — drawing it completes
+        // BOTH boxes in one move. Player must keep the turn.
+        game.drawHLine(0, 0); // top of (0,0) — P2
+        game.drawHLine(1, 0); // bottom of (0,0) — P1
+        game.drawVLine(0, 0); // left of (0,0) — P2
+        game.drawHLine(0, 1); // top of (0,1) — P1
+        game.drawHLine(1, 1); // bottom of (0,1) — P2
+        game.drawVLine(0, 2); // right of (0,1) — P1
+        // P1 now draws the shared vertical at (0,1) — captures BOTH boxes.
+        game.drawVLine(0, 1);
+
+        expect(game.score1, 2);
+        expect(game.current, DotsPlayer.player1);
+      },
+    );
+
     test('restart resets scores', () {
       game.drawHLine(0, 0);
       game.restart();

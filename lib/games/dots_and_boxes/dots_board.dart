@@ -64,6 +64,11 @@ class _DotsBoardState extends State<DotsBoard> {
     _game = widget.initialState != null
         ? DotsModel.fromJson(widget.initialState!)
         : DotsModel(gridSize: widget.boardSize);
+    // Publish initial state so the screen's save notifier knows the board
+    // has been initialised. Without this, a freshly-restored game would have
+    // its notifier at `null`, and the next background would overwrite the
+    // restored save with `null`.
+    _pushStateNotifier();
   }
 
   void _scheduleAiMove() {
@@ -226,6 +231,57 @@ class _DotsBoardState extends State<DotsBoard> {
     }
   }
 
+  /// Accessibility label for screen readers (the Dots board is custom-painted,
+  /// so a SR user cannot walk the lines via per-node semantics).
+  String _boardSemanticsLabel() {
+    final state = _game.state;
+    if (state is DotsWin) {
+      final winner = state.winner == DotsPlayer.player1
+          ? 'Player 1'
+          : 'Player 2';
+      return 'Dots and Boxes board. $winner has won. '
+          'Final score: Player 1: ${_game.score1}, '
+          'Player 2: ${_game.score2}.';
+    }
+    if (state is DotsDraw) {
+      return 'Dots and Boxes board. The game is a draw. '
+          'Player 1: ${_game.score1}, Player 2: ${_game.score2}.';
+    }
+    final turn = _game.current == DotsPlayer.player1 ? 'Player 1' : 'Player 2';
+    return 'Dots and Boxes board. $turn to move. '
+        'Score: Player 1: ${_game.score1}, Player 2: ${_game.score2}. '
+        'Tap an undrawn line to claim it.';
+  }
+
+  /// Tap handler used by screen readers (which have no pixel coordinate).
+  /// Picks the first available line in deterministic order; users needing
+  /// precise placement should turn the screen reader off and tap directly.
+  void _handleSemanticsTap() {
+    for (int r = 0; r < _game.dotRows; r++) {
+      for (int c = 0; c < _game.dotCols - 1; c++) {
+        if (_game.hLines[r][c] == null && _game.drawHLine(r, c)) {
+          _afterMove();
+          return;
+        }
+      }
+    }
+    for (int r = 0; r < _game.dotRows - 1; r++) {
+      for (int c = 0; c < _game.dotCols; c++) {
+        if (_game.vLines[r][c] == null && _game.drawVLine(r, c)) {
+          _afterMove();
+          return;
+        }
+      }
+    }
+  }
+
+  void _afterMove() {
+    setState(() {});
+    _pushStateNotifier();
+    _checkGameOver();
+    _scheduleAiMove();
+  }
+
   @override
   Widget build(BuildContext context) {
     final activePlayer = _game.current == DotsPlayer.player1 ? 1 : 2;
@@ -257,8 +313,15 @@ class _DotsBoardState extends State<DotsBoard> {
                   // LayoutBuilder gives the actual paint-canvas size so
                   // tap mapping never reads from the wrong RenderObject.
                   child: LayoutBuilder(
-                    builder: (_, constraints) => GestureDetector(
-                      onTapDown: (d) => _handleTap(constraints.biggest, d),
+                    builder: (_, constraints) => Semantics(
+                      label: _boardSemanticsLabel(),
+                      button: _game.state is DotsPlaying,
+                      onTap: _game.state is DotsPlaying
+                          ? _handleSemanticsTap
+                          : null,
+                      child: GestureDetector(
+                        onTapDown: (d) => _handleTap(constraints.biggest, d),
+                      ),
                     ),
                   ),
                 ),

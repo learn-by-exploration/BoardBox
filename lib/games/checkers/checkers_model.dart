@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:common_games/models/json_helpers.dart';
+
 /// Pure Dart game logic for Checkers (English Draughts).
 /// Reference: https://github.com/nicholasgasior/flutter-checkers (game logic)
 /// Rules: 8×8 board, mandatory captures, multi-jump chains, king promotion.
@@ -88,14 +90,25 @@ class CheckersModel {
 
   static CheckersModel fromJson(Map<String, dynamic> json) {
     final model = CheckersModel();
-    final board = json['board'] as List;
+    final board = readBoard<String>(
+      json,
+      'board',
+      expectedOuter: CheckersModel.size,
+      expectedInner: CheckersModel.size,
+      isValidCell: (raw) =>
+          raw == 'r' || raw == 'R' || raw == 'b' || raw == 'B',
+    );
     for (int r = 0; r < CheckersModel.size; r++) {
-      final row = board[r] as List;
       for (int c = 0; c < CheckersModel.size; c++) {
-        model._board[r][c] = row[c] as String?;
+        model._board[r][c] = board[r][c];
       }
     }
-    model.current = CheckersPlayer.values[json['current'] as int];
+    model.current = readEnumByIndex<CheckersPlayer>(
+      CheckersPlayer.values,
+      json,
+      'current',
+      enumName: 'CheckersPlayer',
+    );
     model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
     model.selectedRow = json['selectedRow'] as int?;
     model.selectedCol = json['selectedCol'] as int?;
@@ -107,10 +120,20 @@ class CheckersModel {
   }
 
   static CheckersState _stateFromJson(Map<String, dynamic> s) {
-    if ((s['type'] as String) == 'win') {
-      return CheckersWin(CheckersPlayer.values[s['winner'] as int]);
-    }
-    return const CheckersPlaying();
+    return readStateType<CheckersState>(
+      stateJson: s,
+      cases: {
+        'win': (j) => CheckersWin(
+          readEnumByIndex<CheckersPlayer>(
+            CheckersPlayer.values,
+            j,
+            'winner',
+            enumName: 'CheckersPlayer',
+          ),
+        ),
+        'playing': (_) => const CheckersPlaying(),
+      },
+    );
   }
 
   /// Returns true if tap was handled.
@@ -178,11 +201,29 @@ class CheckersModel {
         selectedCol = toC;
         _highlightedMoves = furtherCaptures;
         _midJump = true;
+        // A multi-jump chain can wipe out the opponent's last pieces. Check
+        // now so the UI shows the correct winner as soon as the chain ends.
+        _checkCaptureVictory();
         return;
       }
     }
 
     _endTurn();
+  }
+
+  /// Called during a multi-jump chain: if the opponent has no pieces left,
+  /// declare the active player the winner immediately.
+  void _checkCaptureVictory() {
+    final opponent = current == CheckersPlayer.red
+        ? CheckersPlayer.black
+        : CheckersPlayer.red;
+    if (!_playerHasPieces(opponent)) {
+      state = CheckersWin(current);
+      selectedRow = null;
+      selectedCol = null;
+      _highlightedMoves = [];
+      _midJump = false;
+    }
   }
 
   void _promoteIfNeeded(int r, int c) {

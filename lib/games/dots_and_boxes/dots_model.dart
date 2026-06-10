@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:common_games/models/json_helpers.dart';
+
 /// Pure Dart game logic for Dots and Boxes.
 enum DotsPlayer { player1, player2 }
 
@@ -93,34 +95,57 @@ class DotsModel {
     final gridSize =
         json['gridSize'] as int? ?? (json['hLines'] as List).length;
     final model = DotsModel(gridSize: gridSize);
-    final hLines = json['hLines'] as List;
+    final hLines = readBoard<int>(
+      json,
+      'hLines',
+      expectedOuter: model.dotRows,
+      expectedInner: model.dotCols - 1,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < DotsPlayer.values.length,
+    );
     for (int r = 0; r < model.dotRows; r++) {
-      final row = hLines[r] as List;
       for (int c = 0; c < model.dotCols - 1; c++) {
-        model._hLines[r][c] = row[c] == null
+        model._hLines[r][c] = hLines[r][c] == null
             ? null
-            : DotsPlayer.values[row[c] as int];
+            : DotsPlayer.values[hLines[r][c]!];
       }
     }
-    final vLines = json['vLines'] as List;
+    final vLines = readBoard<int>(
+      json,
+      'vLines',
+      expectedOuter: model.dotRows - 1,
+      expectedInner: model.dotCols,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < DotsPlayer.values.length,
+    );
     for (int r = 0; r < model.dotRows - 1; r++) {
-      final row = vLines[r] as List;
       for (int c = 0; c < model.dotCols; c++) {
-        model._vLines[r][c] = row[c] == null
+        model._vLines[r][c] = vLines[r][c] == null
             ? null
-            : DotsPlayer.values[row[c] as int];
+            : DotsPlayer.values[vLines[r][c]!];
       }
     }
-    final boxes = json['boxes'] as List;
+    final boxes = readBoard<int>(
+      json,
+      'boxes',
+      expectedOuter: model.boxRows,
+      expectedInner: model.boxCols,
+      isValidCell: (raw) =>
+          raw is int && raw >= 0 && raw < DotsPlayer.values.length,
+    );
     for (int r = 0; r < model.boxRows; r++) {
-      final row = boxes[r] as List;
       for (int c = 0; c < model.boxCols; c++) {
-        model._boxes[r][c] = row[c] == null
+        model._boxes[r][c] = boxes[r][c] == null
             ? null
-            : DotsPlayer.values[row[c] as int];
+            : DotsPlayer.values[boxes[r][c]!];
       }
     }
-    model.current = DotsPlayer.values[json['current'] as int];
+    model.current = readEnumByIndex<DotsPlayer>(
+      DotsPlayer.values,
+      json,
+      'current',
+      enumName: 'DotsPlayer',
+    );
     model.state = _stateFromJson(json['state'] as Map<String, dynamic>);
     model.score1 = json['score1'] as int;
     model.score2 = json['score2'] as int;
@@ -128,14 +153,21 @@ class DotsModel {
   }
 
   static DotsState _stateFromJson(Map<String, dynamic> s) {
-    switch (s['type'] as String) {
-      case 'win':
-        return DotsWin(DotsPlayer.values[s['winner'] as int]);
-      case 'draw':
-        return const DotsDraw();
-      default:
-        return const DotsPlaying();
-    }
+    return readStateType<DotsState>(
+      stateJson: s,
+      cases: {
+        'win': (j) => DotsWin(
+          readEnumByIndex<DotsPlayer>(
+            DotsPlayer.values,
+            j,
+            'winner',
+            enumName: 'DotsPlayer',
+          ),
+        ),
+        'draw': (_) => const DotsDraw(),
+        'playing': (_) => const DotsPlaying(),
+      },
+    );
   }
 
   /// Draw a horizontal line between (row, col) and (row, col+1).
