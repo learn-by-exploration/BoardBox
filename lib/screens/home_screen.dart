@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
+import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
 import 'package:common_games/services/game_stats.dart';
 
 enum GameType { gomoku, othello, checkers, dotsAndBoxes, tictactoe }
@@ -11,7 +12,7 @@ class _GameInfo {
   final String subtitle;
   final IconData icon;
   final Color color;
-  final GameType gameType;
+  final GameType? gameType;
   final String description;
 
   const _GameInfo({
@@ -22,6 +23,9 @@ class _GameInfo {
     required this.gameType,
     required this.description,
   });
+
+  /// Sudoku bypasses [GameMode] and goes to its own setup screen.
+  bool get isSudoku => gameType == null;
 }
 
 const _games = [
@@ -66,6 +70,17 @@ const _games = [
     color: Color(0xFF7B61FF),
     gameType: GameType.tictactoe,
     description: 'Get 3 or 4 in a row — choose 3×3, 4×4, or 5×5 board.',
+  ),
+  _GameInfo(
+    title: 'Sudoku',
+    subtitle: 'Number Logic',
+    icon: Icons.calculate_outlined,
+    color: Color(0xFF1565C0),
+    // Sudoku has its own setup screen (no GameType) — see [_openGame].
+    gameType: null,
+    description:
+        'Fill the 9×9 grid so every row, column, and 3×3 box '
+        'contains 1 through 9.',
   ),
 ];
 
@@ -112,11 +127,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openGame(_GameInfo info) async {
+    if (info.isSudoku) {
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const SudokuSetupScreen()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
         builder: (_) =>
-            ModeSelectScreen(gameType: info.gameType, title: info.title),
+            ModeSelectScreen(gameType: info.gameType!, title: info.title),
       ),
     );
     if (mounted) setState(() {});
@@ -327,7 +350,8 @@ class _GameRecord {
   String get label =>
       played == 0 ? 'No matches yet' : '$wins W  ·  $draws D  ·  $losses L';
 
-  static _GameRecord read(GameType gameType) {
+  static _GameRecord? read(GameType? gameType) {
+    if (gameType == null) return null;
     final stats = GameStats.instance;
     return _GameRecord(
       wins: stats.getTotalWins(gameType),
@@ -388,9 +412,9 @@ class _GameListTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      record.label,
+                      record?.label ?? 'New game — pick a difficulty',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: record.played == 0
+                        color: record == null || record.played == 0
                             ? colorScheme.onSurfaceVariant
                             : info.color,
                         fontWeight: FontWeight.w600,
@@ -634,9 +658,9 @@ class _GameTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  record.label,
+                  record?.label ?? 'New game — pick a difficulty',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: record.played == 0
+                    color: record == null || record.played == 0
                         ? colorScheme.onSurfaceVariant
                         : info.color,
                     fontWeight: FontWeight.w600,

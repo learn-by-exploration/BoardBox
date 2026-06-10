@@ -77,6 +77,40 @@ class SudokuModel {
     return changed;
   }
 
+  /// Replaces the current values/notes with [values] and [notes] without
+  /// re-counting mistakes or invalid edits. Used by undo. The caller must
+  /// pass 81-length lists; givens are restored to their original values to
+  /// defend against corrupted snapshots.
+  void restoreSnapshot({
+    required List<int> values,
+    required List<Set<int>> notes,
+  }) {
+    if (values.length != SudokuPuzzle.cellCount ||
+        notes.length != SudokuPuzzle.cellCount) {
+      throw ArgumentError('Snapshot must contain 81 cells');
+    }
+    for (int index = 0; index < SudokuPuzzle.cellCount; index++) {
+      if (puzzle.isGiven(index)) {
+        _values[index] = puzzle.givens[index];
+        _notes[index].clear();
+        continue;
+      }
+      final v = values[index];
+      if (v < 0 || v > 9) {
+        throw ArgumentError('Value at $index out of range: $v');
+      }
+      _values[index] = v;
+      _notes[index]
+        ..clear()
+        ..addAll(notes[index]);
+    }
+    if (_values.indexed.every((cell) => cell.$2 == puzzle.solution[cell.$1])) {
+      state = const SudokuCompleted();
+    } else {
+      state = const SudokuPlaying();
+    }
+  }
+
   Map<String, dynamic> toJson() => {
     'version': 1,
     'puzzle': puzzle.toJson(),
