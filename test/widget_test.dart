@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:common_games/games/dots_and_boxes/dots_board.dart';
+import 'package:common_games/games/gomoku/gomoku_board.dart';
 import 'package:common_games/games/tictactoe/tictactoe_board.dart';
 import 'package:common_games/main.dart';
 import 'package:common_games/models/game_mode.dart';
@@ -136,5 +138,42 @@ void main() {
     await tester.tap(find.text('2 Players'));
     await tester.pumpAndSettle();
     expect(find.text('6×6 · 2 Players'), findsOneWidget);
+  });
+
+  testWidgets('Gomoku board announces the active player', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: GomokuBoard(mode: GameMode.singlePlayer)),
+      ),
+    );
+
+    expect(
+      find.bySemanticsLabel(RegExp(r'Gomoku board\..*Black to move')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Dots board announces the active player and score', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: DotsBoard(mode: GameMode.singlePlayer)),
+      ),
+    );
+
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'Dots and Boxes board\. Player 1 to move\.'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Home catalog includes the Sudoku tile', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+
+    expect(find.text('Sudoku'), findsOneWidget);
+    expect(find.text('Number Logic'), findsOneWidget);
   });
 }

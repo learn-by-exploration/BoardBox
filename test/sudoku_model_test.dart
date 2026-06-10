@@ -177,6 +177,53 @@ void main() {
 
       expect(puzzle.givens[1], 3);
     });
+
+    test(
+      'restoreSnapshot reverts values and notes without recounting mistakes',
+      () {
+        final model = SudokuModel(puzzleWithBlanks([0, 1]));
+        // User fills index 0 wrong, then hints it; mistakes goes to 1, hints to 1.
+        model.enterValue(0, 4);
+        model.revealHint(0);
+        expect(model.mistakes, 1);
+        expect(model.hintsUsed, 1);
+        expect(model.values[0], 5);
+
+        // Snapshot the "before" state of a different cell so we can restore it.
+        final snapshotValues = List<int>.from(model.values);
+        final snapshotNotes = [for (final n in model.notes) Set<int>.from(n)];
+        // User then enters a wrong value at index 1, adding another mistake.
+        model.enterValue(1, 4);
+        expect(model.mistakes, 2);
+
+        // Undo by restoring the snapshot — mistakes counter must NOT change.
+        model.restoreSnapshot(values: snapshotValues, notes: snapshotNotes);
+        expect(model.values[0], 5);
+        expect(model.values[1], 0);
+        expect(model.mistakes, 2, reason: 'restoreSnapshot is a pure restore');
+        expect(model.hintsUsed, 1);
+      },
+    );
+
+    test('restoreSnapshot completes the puzzle when the snapshot is full', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1, 2]));
+      final solutionValues = List<int>.from(solution);
+      final snapshot = [
+        for (int i = 0; i < SudokuPuzzle.cellCount; i++) solutionValues[i],
+      ];
+      final notes = List.generate(SudokuPuzzle.cellCount, (_) => <int>{});
+
+      model.restoreSnapshot(values: snapshot, notes: notes);
+      expect(model.state, isA<SudokuCompleted>());
+    });
+
+    test('restoreSnapshot rejects wrong-sized lists', () {
+      final model = SudokuModel(puzzleWithBlanks([0]));
+      expect(
+        () => model.restoreSnapshot(values: [0], notes: [<int>{}]),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
   });
 
   test('factory generates a valid puzzle with one solution', () {
