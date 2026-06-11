@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:common_games/games/karuro/karuro_board.dart';
 import 'package:common_games/games/karuro/karuro_model.dart';
 import 'package:common_games/games/karuro/karuro_puzzle.dart';
+import 'package:common_games/screens/karuro/karuro_game_screen.dart';
 
 /// Build the model with a small JSON literal — keeps the test free of
 /// dart:convert at the top of the file.
@@ -41,9 +45,7 @@ KaruroModel _model() {
 
 void main() {
   group('KaruroBoard', () {
-    testWidgets('renders a Semantics label per fillable cell', (
-      tester,
-    ) async {
+    testWidgets('renders a Semantics label per fillable cell', (tester) async {
       final model = _model();
       await tester.pumpWidget(
         MaterialApp(
@@ -154,12 +156,103 @@ void main() {
       // The exact color is theme-dependent, but a Container with
       // BoxDecoration must be present in the cell's subtree.
       final containers = tester
-          .widgetList<Container>(find.descendant(
-            of: cellFinder,
-            matching: find.byType(Container),
-          ))
+          .widgetList<Container>(
+            find.descendant(of: cellFinder, matching: find.byType(Container)),
+          )
           .where((c) => c.decoration is BoxDecoration);
       expect(containers, isNotEmpty);
+    });
+  });
+
+  group('KaruroGameScreen', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    testWidgets('completing a puzzle shows the win dialog', (tester) async {
+      final model = _model();
+      await tester.pumpWidget(
+        MaterialApp(home: KaruroGameScreen(puzzle: model.puzzle)),
+      );
+      // Let the bootstrap finish.
+      await tester.pumpAndSettle();
+
+      // Tap the cell at (1, 1) — its Semantics label uses 1-based
+      // indices. Flat index for (1, 1) in a 3-wide grid is 4.
+      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty'));
+      await tester.pump();
+      // Enter the correct digit "1" from the palette.
+      await tester.tap(find.bySemanticsLabel('Enter 1'));
+      await tester.pump();
+
+      await tester.tap(find.bySemanticsLabel('Row 2 column 3, empty'));
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Enter 2'));
+      await tester.pumpAndSettle();
+
+      // The win dialog uses a celebration icon.
+      expect(find.byIcon(Icons.celebration_outlined), findsOneWidget);
+      expect(find.text('Puzzle solved!'), findsOneWidget);
+    });
+
+    testWidgets('"Reset" clears the save and restarts the puzzle', (
+      tester,
+    ) async {
+      final model = _model();
+      // Pre-seed a save so the screen restores from JSON.
+      final restored = KaruroModel(model.puzzle);
+      restored.enterValue(1, 1, '1');
+      final saveJson = jsonEncode(restored.toJson());
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        KaruroGameScreen.saveKey(model.puzzle.id): saveJson,
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(home: KaruroGameScreen(puzzle: model.puzzle)),
+      );
+      await tester.pumpAndSettle();
+
+      // Restored state: cell (1, 1) carries value "1" — its Semantics
+      // label flips to "Row 2 column 2, value 1".
+      expect(find.bySemanticsLabel('Row 2 column 2, value 1'), findsOneWidget);
+
+      // Tap Reset (the key is defined in the screen's static const).
+      await tester.tap(find.byKey(const ValueKey('karuro_reset')));
+      await tester.pumpAndSettle();
+
+      // After reset, the cell is empty again.
+      expect(find.bySemanticsLabel('Row 2 column 2, value 1'), findsNothing);
+      expect(find.bySemanticsLabel('Row 2 column 2, empty'), findsOneWidget);
+
+      // The save key should be cleared.
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString(KaruroGameScreen.saveKey(model.puzzle.id)),
+        isNull,
+      );
+    });
+
+    testWidgets('toggling "Show errors" hides the error tint', (tester) async {
+      final model = _model();
+      await tester.pumpWidget(
+        MaterialApp(home: KaruroGameScreen(puzzle: model.puzzle)),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap (1, 1) and enter a wrong digit. The cell's Semantics label
+      // flips to "value 9".
+      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty'));
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Enter 9'));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Row 2 column 2, value 9'), findsOneWidget);
+
+      // Toggle show-errors off. The value should remain — only the
+      // tint changes — and no exception should fire.
+      await tester.tap(find.byKey(const ValueKey('karuro_toggle_errors')));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Row 2 column 2, value 9'), findsOneWidget);
     });
   });
 }
