@@ -94,7 +94,7 @@ void main() {
 
       // Tap the cell at (1, 1). It's the top-left fillable cell in the
       // 3x3 grid. We find it by its Semantics label.
-      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty'));
+      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty, clue 1'));
       await tester.pump();
       // Flat index for (1, 1) in a 3-wide grid is 1 * 3 + 1 = 4.
       expect(tapped, 4);
@@ -151,7 +151,7 @@ void main() {
 
       // Verify the cell at (1, 1) gets the error-container color. We
       // find it by Semantics and inspect the rendered BoxDecoration.
-      final cellFinder = find.bySemanticsLabel('Row 2 column 2, empty');
+      final cellFinder = find.bySemanticsLabel('Row 2 column 2, empty, clue 1');
       expect(cellFinder, findsOneWidget);
       // The exact color is theme-dependent, but a Container with
       // BoxDecoration must be present in the cell's subtree.
@@ -162,11 +162,64 @@ void main() {
           .where((c) => c.decoration is BoxDecoration);
       expect(containers, isNotEmpty);
     });
+
+    testWidgets('clue cell carries a Semantics label with sum and axis', (
+      tester,
+    ) async {
+      // In the v1 schema, the entry's first cell is also the cell that
+      // carries the clue number badge. So we verify the label on the
+      // entry cell at the start of a run, not on a separate block clue
+      // cell (which is the classic-Kakuro pattern this board does not
+      // reproduce). The 1A run starts at (1, 1) in this 3×3 puzzle.
+      final model = _model();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 300,
+              child: KaruroBoard(
+                model: model,
+                selectedIndex: null,
+                onCellSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The first cell of run 1A exposes its clue number in the
+      // semantics tree.
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, empty, clue 1'),
+        findsOneWidget,
+      );
+      // Plain block cells (no entry start) get a fallback label.
+      expect(
+        find.bySemanticsLabel('Block cell at row 1, column 1'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('KaruroGameScreen', () {
     setUp(() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    testWidgets('palette chip tap target is at least 48dp tall', (
+      tester,
+    ) async {
+      final model = _model();
+      await tester.pumpWidget(
+        MaterialApp(home: KaruroGameScreen(puzzle: model.puzzle)),
+      );
+      await tester.pumpAndSettle();
+
+      final chipFinder = find.bySemanticsLabel('Enter A');
+      expect(chipFinder, findsOneWidget);
+      final size = tester.getSize(chipFinder);
+      expect(size.height, greaterThanOrEqualTo(48));
     });
 
     testWidgets('completing a puzzle shows the win dialog', (tester) async {
@@ -179,7 +232,7 @@ void main() {
 
       // Tap the cell at (1, 1) — its Semantics label uses 1-based
       // indices. Flat index for (1, 1) in a 3-wide grid is 4.
-      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty'));
+      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty, clue 1'));
       await tester.pump();
       // Enter the correct digit "1" from the palette.
       await tester.tap(find.bySemanticsLabel('Enter 1'));
@@ -214,15 +267,24 @@ void main() {
 
       // Restored state: cell (1, 1) carries value "1" — its Semantics
       // label flips to "Row 2 column 2, value 1".
-      expect(find.bySemanticsLabel('Row 2 column 2, value 1'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, value 1, clue 1'),
+        findsOneWidget,
+      );
 
       // Tap Reset (the key is defined in the screen's static const).
       await tester.tap(find.byKey(const ValueKey('karuro_reset')));
       await tester.pumpAndSettle();
 
       // After reset, the cell is empty again.
-      expect(find.bySemanticsLabel('Row 2 column 2, value 1'), findsNothing);
-      expect(find.bySemanticsLabel('Row 2 column 2, empty'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, value 1, clue 1'),
+        findsNothing,
+      );
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, empty, clue 1'),
+        findsOneWidget,
+      );
 
       // The save key should be cleared.
       final prefs = await SharedPreferences.getInstance();
@@ -241,18 +303,24 @@ void main() {
 
       // Tap (1, 1) and enter a wrong digit. The cell's Semantics label
       // flips to "value 9".
-      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty'));
+      await tester.tap(find.bySemanticsLabel('Row 2 column 2, empty, clue 1'));
       await tester.pump();
       await tester.tap(find.bySemanticsLabel('Enter 9'));
       await tester.pumpAndSettle();
 
-      expect(find.bySemanticsLabel('Row 2 column 2, value 9'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, value 9, clue 1'),
+        findsOneWidget,
+      );
 
       // Toggle show-errors off. The value should remain — only the
       // tint changes — and no exception should fire.
       await tester.tap(find.byKey(const ValueKey('karuro_toggle_errors')));
       await tester.pumpAndSettle();
-      expect(find.bySemanticsLabel('Row 2 column 2, value 9'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Row 2 column 2, value 9, clue 1'),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -125,18 +125,49 @@ class _BlockCell extends StatelessWidget {
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        border: Border.all(color: colorScheme.outlineVariant, width: 0.5),
-      ),
-      child: Stack(
-        children: [
-          if (downEntry != null) _ClueBadge(entry: downEntry, axis: 'down'),
-          if (rightEntry != null) _ClueBadge(entry: rightEntry, axis: 'across'),
-        ],
+    final semantic = _clueSemanticsLabel(downEntry, rightEntry);
+
+    return Semantics(
+      container: true,
+      label: semantic,
+      excludeSemantics: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          border: Border.all(color: colorScheme.outlineVariant, width: 0.5),
+        ),
+        child: Stack(
+          children: [
+            if (downEntry != null) _ClueBadge(entry: downEntry, axis: 'down'),
+            if (rightEntry != null)
+              _ClueBadge(entry: rightEntry, axis: 'across'),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Build a screen-reader description for the block cell, e.g.
+  /// "Clue 8, across, three cells" or
+  /// "Word clue: Feline pet, four cells".
+  String _clueSemanticsLabel(KaruroEntry? down, KaruroEntry? right) {
+    final parts = <String>[];
+    for (final entry in [down, right]) {
+      if (entry == null) continue;
+      final axis = entry.direction == KaruroDirection.across
+          ? 'across'
+          : 'down';
+      final kind = switch (entry) {
+        KaruroNumberEntry(:final sum) => 'Clue $sum',
+        KaruroWordEntry(:final clue) => 'Word clue: $clue',
+      };
+      final cells = entry.length;
+      parts.add('$kind, $axis, $cells cells');
+    }
+    if (parts.isEmpty) {
+      return 'Block cell at row ${row + 1}, column ${col + 1}';
+    }
+    return parts.join('; ');
   }
 }
 
@@ -234,7 +265,7 @@ class _EntryCell extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: _semanticsLabel(),
+      label: _semanticsLabel(clueNumber: clueNumber),
       button: true,
       enabled: !isComplete,
       onTap: isComplete ? null : onTap,
@@ -246,10 +277,7 @@ class _EntryCell extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: background,
-            border: Border.all(
-              color: colorScheme.outlineVariant,
-              width: 0.5,
-            ),
+            border: Border.all(color: colorScheme.outlineVariant, width: 0.5),
           ),
           child: Stack(
             children: [
@@ -302,13 +330,16 @@ class _EntryCell extends StatelessWidget {
   }
 
   /// Build a Semantics-friendly label like
-  /// "Row 1 column 1, value 1, number cell".
-  String _semanticsLabel() {
+  /// "Row 1 column 1, value 1, number cell, clue 1".
+  String _semanticsLabel({String? clueNumber}) {
     final parts = <String>['Row ${row + 1} column ${col + 1}'];
     if (value != null) {
       parts.add('value $value');
     } else {
       parts.add('empty');
+    }
+    if (clueNumber != null) {
+      parts.add('clue $clueNumber');
     }
     return parts.join(', ');
   }

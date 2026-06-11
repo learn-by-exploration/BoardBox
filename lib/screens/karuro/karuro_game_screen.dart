@@ -485,7 +485,7 @@ class _CharChip extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: SizedBox(
-        width: 36,
+        width: 48,
         height: 48,
         child: Material(
           color: disabled
