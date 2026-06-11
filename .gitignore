@@ -51,3 +51,7 @@ app.*.map.json
 *.keystore
 deployment_cert.der
 upload_cert.der
+
+# Per-machine Claude Code notes (API keys, local FVM path, WIP reminders).
+# AGENTS.md and CLAUDE.md are committed; CLAUDE.local.md is for personal scratch only.
+CLAUDE.local.md

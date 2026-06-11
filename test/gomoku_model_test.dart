@@ -62,5 +62,19 @@ void main() {
       expect(game.current, GomokuPlayer.black);
       expect(game.state, isA<GomokuPlaying>());
     });
+
+    test('six-in-a-row still wins (regression: count >= 5, not == 5)', () {
+      // Lock in the AGENTS.md invariant: five OR MORE contiguous stones wins.
+      // If someone tightens the rule to count == 5 in gomoku_model.dart:_hasFive
+      // without updating tests, this case breaks.
+      // Black plays row 0, cols 0-5; white plays row 1 between each black.
+      for (int i = 0; i < 5; i++) {
+        game.play(0, i); // black
+        game.play(1, i); // white
+      }
+      game.play(0, 5); // black's 6th stone — should win immediately
+      expect(game.state, isA<GomokuWin>());
+      expect((game.state as GomokuWin).winner, GomokuPlayer.black);
+    });
   });
 }
