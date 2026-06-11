@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:common_games/games/karuro/karuro_board.dart';
 import 'package:common_games/games/karuro/karuro_model.dart';
 import 'package:common_games/games/karuro/karuro_puzzle.dart';
+import 'package:common_games/services/game_stats.dart';
 import 'package:common_games/services/haptic_service.dart';
 
 /// Full Karuro play loop. Loads a puzzle, renders the board, routes user
@@ -214,6 +215,8 @@ class _KaruroGameScreenState extends State<KaruroGameScreen> {
     if (model.isWon && !_wonShown) {
       _wonShown = true;
       HapticService.onGameOver();
+      // Record the win for the home-screen counter.
+      GameStats.instance.recordKaruroWin();
       // Clear the save on completion so a fresh "new puzzle" starts
       // from a known-empty state.
       SharedPreferences.getInstance().then((prefs) async {

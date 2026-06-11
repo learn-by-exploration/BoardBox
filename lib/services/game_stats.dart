@@ -69,4 +69,17 @@ class GameStats {
     final key = _key(game, difficulty, 'draws');
     await _prefs?.setInt(key, (_prefs?.getInt(key) ?? 0) + 1);
   }
+
+  // ─── Karuro (single-player puzzle) ────────────────────────────────────
+  // Karuro has no AI opponent and no per-difficulty breakdown in v1, so
+  // it lives outside the (game × AiDifficulty) key shape used by the
+  // other games. The single counter is shown on the home tile.
+
+  static const String _karuroWinsKey = 'karuro_wins';
+
+  int getKaruroWins() => _prefs?.getInt(_karuroWinsKey) ?? 0;
+
+  Future<void> recordKaruroWin() async {
+    await _prefs?.setInt(_karuroWinsKey, getKaruroWins() + 1);
+  }
 }

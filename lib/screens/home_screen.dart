@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:common_games/screens/karuro/karuro_setup_screen.dart';
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
@@ -15,6 +16,11 @@ class _GameInfo {
   final GameType? gameType;
   final String description;
 
+  /// Custom route key. When set, the game opens via its own setup
+  /// screen rather than the shared [ModeSelectScreen] / Sudoku flow.
+  /// Currently: 'sudoku' and 'karuro'.
+  final String? customRoute;
+
   const _GameInfo({
     required this.title,
     required this.subtitle,
@@ -22,10 +28,14 @@ class _GameInfo {
     required this.color,
     required this.gameType,
     required this.description,
+    this.customRoute,
   });
 
   /// Sudoku bypasses [GameMode] and goes to its own setup screen.
-  bool get isSudoku => gameType == null;
+  bool get isSudoku => customRoute == 'sudoku';
+
+  /// Karuro has its own setup screen with bundled puzzles, like Sudoku.
+  bool get isKaruro => customRoute == 'karuro';
 }
 
 const _games = [
@@ -78,9 +88,22 @@ const _games = [
     color: Color(0xFF1565C0),
     // Sudoku has its own setup screen (no GameType) — see [_openGame].
     gameType: null,
+    customRoute: 'sudoku',
     description:
         'Fill the 9×9 grid so every row, column, and 3×3 box '
         'contains 1 through 9.',
+  ),
+  _GameInfo(
+    title: 'Karuro',
+    subtitle: 'Hybrid Puzzle',
+    icon: Icons.extension_rounded,
+    color: Color(0xFF8E24AA),
+    // Karuro has its own setup screen with bundled puzzles.
+    gameType: null,
+    customRoute: 'karuro',
+    description:
+        'Cross sums and word clues on the same grid. '
+        'Hand-picked puzzles from easy to hard.',
   ),
 ];
 
@@ -131,6 +154,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await Navigator.push<void>(
         context,
         MaterialPageRoute<void>(builder: (_) => const SudokuSetupScreen()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+    if (info.isKaruro) {
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const KaruroSetupScreen()),
       );
       if (mounted) setState(() {});
       return;
@@ -350,7 +381,12 @@ class _GameRecord {
   String get label =>
       played == 0 ? 'No matches yet' : '$wins W  ·  $draws D  ·  $losses L';
 
-  static _GameRecord? read(GameType? gameType) {
+  static _GameRecord? read(_GameInfo info) {
+    if (info.isKaruro) {
+      final wins = GameStats.instance.getKaruroWins();
+      return _GameRecord(wins: wins, draws: 0, losses: 0);
+    }
+    final gameType = info.gameType;
     if (gameType == null) return null;
     final stats = GameStats.instance;
     return _GameRecord(
@@ -370,7 +406,7 @@ class _GameListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final record = _GameRecord.read(info.gameType);
+    final record = _GameRecord.read(info);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -566,7 +602,7 @@ class _GameTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final record = _GameRecord.read(info.gameType);
+    final record = _GameRecord.read(info);
 
     return Card(
       clipBehavior: Clip.antiAlias,
