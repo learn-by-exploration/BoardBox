@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:common_games/games/sudoku/sudoku_board.dart';
 import 'package:common_games/games/sudoku/sudoku_model.dart';
 import 'package:common_games/games/sudoku/sudoku_puzzle.dart';
+import 'package:common_games/screens/sudoku/sudoku_game_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
 
 const _solution = [
@@ -243,4 +246,120 @@ void main() {
     expect(find.text('Medium'), findsOneWidget);
     expect(find.text('Hard'), findsOneWidget);
   });
+
+  testWidgets('timer pill advances while playing and freezes on pause', (
+    tester,
+  ) async {
+    // Resize to a phone-shaped surface so the board + controls fit.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Pre-seed a save so the screen restores instead of running the isolate.
+    final seedModel = SudokuModel(_puzzleWithBlanks([0]));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SudokuGameScreen(
+          difficulty: SudokuDifficulty.easy,
+          saveKey: 'sudoku_save_easy',
+        ),
+      ),
+    );
+    // Let bootstrap and _startClock settle.
+    await tester.pumpAndSettle();
+
+    // Initial timer reads 00:00.
+    expect(find.text('Time: 00:00'), findsOneWidget);
+
+    // Advance two seconds via the periodic timer.
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Time: 00:02'), findsOneWidget);
+
+    // Tap the pause button and pump; the timer should stop advancing.
+    await tester.tap(find.byKey(const ValueKey('sudoku_pause_button')));
+    await tester.pump();
+    expect(find.text('Paused: 00:02'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    expect(
+      find.text('Paused: 00:02'),
+      findsOneWidget,
+      reason: 'paused timer must not advance',
+    );
+  });
+
+  testWidgets(
+    'timer pauses when the app is backgrounded and resumes on foreground',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final seedModel = SudokuModel(_puzzleWithBlanks([0]));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SudokuGameScreen(
+            difficulty: SudokuDifficulty.easy,
+            saveKey: 'sudoku_save_easy',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+      // The clock pill should read 00:02 here. Use a relaxed matcher since
+      // text wrapping on a 360dp-wide surface can ellipsize part of it.
+      expect(find.textContaining('00:02'), findsWidgets);
+
+      // App goes to background. The model's `paused` flag should flip to
+      // true. We can't directly inspect the model from outside the screen,
+      // but we can verify the *behaviour*: while paused, the periodic timer
+      // continues to fire (it's still scheduled) but `model.tick` becomes a
+      // no-op, so `elapsedSeconds` must not advance. The pause also
+      // disables the scheduler's frame pipeline, so the next `pump()` may
+      // not re-render — we don't assert on UI labels during the paused
+      // window, only on the model state after resume.
+      final binding = WidgetsBinding.instance;
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+
+      // Pump 3 simulated seconds while the app is backgrounded. If the
+      // screen's lifecycle handler did NOT set `paused = true`, the model
+      // would tick forward to 5 by now. The assertion below (after resume)
+      // will catch that — `elapsedSeconds` must be 4 (2 pre-pause + 2
+      // post-resume), not 7.
+      await tester.pump(const Duration(seconds: 3));
+
+      // App returns to foreground. Frame scheduling re-enables, and the
+      // dirty widget from `_setPaused(true)` finally rebuilds; subsequent
+      // pumps run the periodic timer normally.
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      final resumedPill = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('sudoku_timer_pill')),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(
+        resumedPill.data,
+        contains('Time'),
+        reason: 'timer pill should switch back to "Time" label',
+      );
+      expect(
+        resumedPill.data,
+        contains('00:04'),
+        reason:
+            'elapsed seconds must freeze during background and advance '
+            'after foreground (2 pre-pause + 3 paused + 2 resumed = 4, not 7)',
+      );
+    },
+  );
 }

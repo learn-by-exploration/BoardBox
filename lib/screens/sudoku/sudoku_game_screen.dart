@@ -46,6 +46,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   bool _generating = false;
   String? _generationError;
   Timer? _autosaveDebounce;
+  Timer? _clockTimer;
   bool _gameOverShown = false;
 
   @override
@@ -59,6 +60,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _autosaveDebounce?.cancel();
+    _clockTimer?.cancel();
     // Save synchronously on the way out. _autosave is best-effort and the
     // user is leaving the screen — don't risk losing progress.
     _saveNow();
@@ -67,6 +69,15 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The puzzle is effectively paused any time the app isn't foregrounded.
+    // The model ticks a 1s timer; freezing it here is required by the spec.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _setPaused(true);
+    } else if (state == AppLifecycleState.resumed) {
+      _setPaused(false);
+    }
     // On pause, flush whatever is pending. The debounce timer is also
     // cancelled so we don't double-write.
     if (state == AppLifecycleState.paused) {
@@ -98,6 +109,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
       _model = model;
       _generationError = null;
     });
+    _startClock();
   }
 
   Future<void> _generatePuzzle() async {
@@ -116,6 +128,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         _model = SudokuModel(puzzle);
         _generating = false;
       });
+      _startClock();
       unawaited(_saveNow());
     } catch (e) {
       if (!mounted) return;
@@ -334,23 +347,74 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     return true;
   }
 
+  void _startClock() {
+    _clockTimer?.cancel();
+    // Drive a 1Hz tick into the model. The model itself drops ticks when
+    // paused or completed, so this is safe to leave running across the
+    // full screen lifetime.
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final model = _model;
+      if (model == null) return;
+      model.tick(1);
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _setPaused(bool paused) {
+    final model = _model;
+    if (model == null) return;
+    if (model.paused == paused) return;
+    setState(() {
+      model.paused = paused;
+    });
+  }
+
+  void _togglePause() {
+    final model = _model;
+    if (model == null) return;
+    if (model.state is! SudokuPlaying) return;
+    setState(() {
+      model.paused = !model.paused;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final model = _model;
     return Scaffold(
       appBar: AppBar(
         title: Text('Sudoku · ${widget.difficulty.name}'),
         actions: [
           IconButton(
+            key: const ValueKey('sudoku_pause_button'),
+            icon: Icon(
+              model?.paused == true
+                  ? Icons.play_arrow_rounded
+                  : Icons.pause_rounded,
+            ),
+            tooltip: model?.paused == true ? 'Resume' : 'Pause',
+            onPressed:
+                model == null ||
+                    model.state is! SudokuPlaying ||
+                    model.isAtMistakeLimit
+                ? null
+                : _togglePause,
+          ),
+          IconButton(
             icon: const Icon(Icons.lightbulb_outline),
             tooltip: 'Hint',
-            onPressed: _model == null || _selectedIndex == null
+            onPressed:
+                model == null ||
+                    _selectedIndex == null ||
+                    model.paused ||
+                    model.isAtMistakeLimit
                 ? null
                 : _onHint,
           ),
           IconButton(
             icon: const Icon(Icons.restart_alt_rounded),
             tooltip: 'Restart',
-            onPressed: _model == null ? null : _restart,
+            onPressed: model == null ? null : _restart,
           ),
         ],
       ),
@@ -426,17 +490,32 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _StatPill(
-                    icon: Icons.close,
-                    label: 'Mistakes',
-                    value: '${model.mistakes}',
-                    color: Theme.of(context).colorScheme.error,
+                  Flexible(
+                    child: _StatPill(
+                      icon: Icons.close,
+                      label: 'Mistakes',
+                      value: '${model.mistakes}',
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
-                  _StatPill(
-                    icon: Icons.lightbulb_outline,
-                    label: 'Hints',
-                    value: '${model.hintsUsed}',
-                    color: Theme.of(context).colorScheme.tertiary,
+                  Flexible(
+                    child: _StatPill(
+                      key: const ValueKey('sudoku_timer_pill'),
+                      icon: model.paused
+                          ? Icons.pause_rounded
+                          : Icons.timer_outlined,
+                      label: model.paused ? 'Paused' : 'Time',
+                      value: _formatElapsed(model.elapsedSeconds),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  Flexible(
+                    child: _StatPill(
+                      icon: Icons.lightbulb_outline,
+                      label: 'Hints',
+                      value: '${model.hintsUsed}',
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
                   ),
                 ],
               ),
@@ -457,7 +536,9 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                 canEdit:
                     canEdit &&
                     selected != null &&
-                    !model.puzzle.isGiven(selected),
+                    !model.puzzle.isGiven(selected) &&
+                    !model.paused &&
+                    !model.isAtMistakeLimit,
                 notesMode: _notesMode,
                 canUndo: _undoStack.isNotEmpty,
                 onNumber: _onNumber,
@@ -477,8 +558,15 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   }
 }
 
+String _formatElapsed(int seconds) {
+  final m = (seconds ~/ 60).toString().padLeft(2, '0');
+  final s = (seconds % 60).toString().padLeft(2, '0');
+  return '$m:$s';
+}
+
 class _StatPill extends StatelessWidget {
   const _StatPill({
+    super.key,
     required this.icon,
     required this.label,
     required this.value,
@@ -495,13 +583,16 @@ class _StatPill extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(
-          '$label: $value',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
+        Flexible(
+          child: Text(
+            '$label: $value',
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
