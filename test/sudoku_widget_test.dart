@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:common_games/games/sudoku/sudoku_board.dart';
+import 'package:common_games/games/sudoku/sudoku_controls.dart';
 import 'package:common_games/games/sudoku/sudoku_model.dart';
 import 'package:common_games/games/sudoku/sudoku_puzzle.dart';
 import 'package:common_games/screens/sudoku/sudoku_game_screen.dart';
@@ -246,6 +247,114 @@ void main() {
     expect(find.text('Easy'), findsOneWidget);
     expect(find.text('Medium'), findsOneWidget);
     expect(find.text('Hard'), findsOneWidget);
+  });
+
+  testWidgets('cell with notes announces the notes in its Semantics label', (
+    tester,
+  ) async {
+    final model = SudokuModel(_puzzleWithBlanks([0, 1]));
+    model.toggleNote(0, 2);
+    model.toggleNote(0, 5);
+
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      wrap(
+        SudokuBoard(
+          model: model,
+          selectedIndex: 0,
+          notesMode: true,
+          onCellSelected: (_) {},
+        ),
+      ),
+    );
+
+    // The cell at (row 1, col 1) — index 0 — should announce "Row 1
+    // column 1, empty, notes [2, 5]".
+    final cellFinder = find.bySemanticsLabel(
+      RegExp(r'Row 1 column 1, empty, notes \[2, 5\]'),
+    );
+    expect(cellFinder, findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('number-pad buttons expose a Semantics label', (tester) async {
+    // Render the controls in isolation — the full game screen needs a
+    // tall viewport, and we only care about the buttons here.
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      wrap(
+        SudokuControls(
+          canEdit: true,
+          notesMode: false,
+          canUndo: true,
+          onNumber: (_) {},
+          onErase: () {},
+          onToggleNotes: () {},
+          onUndo: () {},
+        ),
+      ),
+    );
+
+    // Each number button should announce its digit.
+    for (final n in [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+      expect(
+        find.bySemanticsLabel('Place $n'),
+        findsOneWidget,
+        reason: 'Place $n button should be reachable via Semantics',
+      );
+    }
+    expect(
+      find.bySemanticsLabel('Erase cell'),
+      findsOneWidget,
+      reason: 'Erase button should be reachable via Semantics',
+    );
+    expect(
+      find.bySemanticsLabel('Undo last action'),
+      findsOneWidget,
+      reason: 'Undo button should be reachable via Semantics',
+    );
+    handle.dispose();
+  });
+
+  testWidgets('notes toggle is announced as a toggleable button', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      wrap(
+        SudokuControls(
+          canEdit: true,
+          notesMode: false,
+          canUndo: true,
+          onNumber: (_) {},
+          onErase: () {},
+          onToggleNotes: () {},
+          onUndo: () {},
+        ),
+      ),
+    );
+
+    // Initially off.
+    expect(find.bySemanticsLabel(RegExp(r'Notes mode, off')), findsOneWidget);
+
+    // Tap to turn on. The label should change to "on" only after
+    // the parent rebuilds with notesMode: true, so re-pump the widget
+    // tree with the new state.
+    await tester.pumpWidget(
+      wrap(
+        SudokuControls(
+          canEdit: true,
+          notesMode: true,
+          canUndo: true,
+          onNumber: (_) {},
+          onErase: () {},
+          onToggleNotes: () {},
+          onUndo: () {},
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel(RegExp(r'Notes mode, on')), findsOneWidget);
+    handle.dispose();
   });
 
   testWidgets('timer pill advances while playing and freezes on pause', (

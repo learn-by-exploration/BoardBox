@@ -114,11 +114,14 @@ class _SudokuCell extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final row = index ~/ 9;
     final col = index % 9;
-    final cellLabel = isFixed
-        ? 'Row ${row + 1} column ${col + 1}, fixed $value'
-        : value != 0
-        ? 'Row ${row + 1} column ${col + 1}, $value'
-        : 'Row ${row + 1} column ${col + 1}, empty';
+    final notesPart = notes.isEmpty ? '' : ', notes ${notes.toList()..sort()}';
+    final cellLabel =
+        (isFixed
+            ? 'Row ${row + 1} column ${col + 1}, fixed $value'
+            : value != 0
+            ? 'Row ${row + 1} column ${col + 1}, $value'
+            : 'Row ${row + 1} column ${col + 1}, empty') +
+        notesPart;
 
     // Backgrounds: invalid > selected > fixed > highlighted > default
     Color background;
@@ -135,6 +138,8 @@ class _SudokuCell extends StatelessWidget {
     }
 
     return Semantics(
+      container: true,
+      excludeSemantics: true,
       label: cellLabel,
       button: !isFixed && !isComplete,
       onTap: isFixed || isComplete ? null : onTap,

@@ -35,12 +35,13 @@ class SudokuControls extends StatelessWidget {
       builder: (context, constraints) {
         final available = constraints.maxWidth;
         final cellSize = ((available - spacing * (cols - 1)) / cols).clamp(
-          44.0,
+          48.0,
           72.0,
         );
 
         Widget number(int n) => _PadButton(
           key: ValueKey('sudoku_pad_$n'),
+          semanticsLabel: 'Place $n',
           width: cellSize,
           height: cellSize,
           onPressed: canEdit ? () => _fireHaptic(() => onNumber(n)) : null,
@@ -56,6 +57,7 @@ class SudokuControls extends StatelessWidget {
 
         Widget eraseButton() => _PadButton(
           key: const ValueKey('sudoku_pad_erase'),
+          semanticsLabel: 'Erase cell',
           width: cellSize,
           height: cellSize,
           onPressed: canEdit ? () => _fireHaptic(onErase) : null,
@@ -68,6 +70,7 @@ class SudokuControls extends StatelessWidget {
 
         Widget undoButton() => _PadButton(
           key: const ValueKey('sudoku_pad_undo'),
+          semanticsLabel: 'Undo last action',
           width: cellSize,
           height: cellSize,
           onPressed: canUndo ? () => _fireHaptic(onUndo) : null,
@@ -111,27 +114,42 @@ class SudokuControls extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: canEdit
+                  child: Semantics(
+                    container: true,
+                    toggled: notesMode,
+                    button: true,
+                    enabled: canEdit,
+                    label: 'Notes mode, ${notesMode ? 'on' : 'off'}',
+                    onTap: canEdit
                         ? () {
                             HapticService.onMove();
                             onToggleNotes();
                           }
                         : null,
-                    icon: const Icon(Icons.edit_note),
-                    label: Text(notesMode ? 'Notes: On' : 'Notes'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: notesMode
-                          ? colorScheme.primary
-                          : colorScheme.onSurface,
-                      side: BorderSide(
-                        color: notesMode
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 8,
+                    child: ExcludeSemantics(
+                      child: OutlinedButton.icon(
+                        onPressed: canEdit
+                            ? () {
+                                HapticService.onMove();
+                                onToggleNotes();
+                              }
+                            : null,
+                        icon: const Icon(Icons.edit_note),
+                        label: Text(notesMode ? 'Notes: On' : 'Notes'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: notesMode
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
+                          side: BorderSide(
+                            color: notesMode
+                                ? colorScheme.primary
+                                : colorScheme.outlineVariant,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 8,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -160,27 +178,37 @@ class _PadButton extends StatelessWidget {
     required this.width,
     required this.height,
     required this.child,
+    required this.semanticsLabel,
     this.onPressed,
   });
 
   final double width;
   final double height;
   final Widget child;
+  final String semanticsLabel;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Material(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onPressed,
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: onPressed != null,
+      label: semanticsLabel,
+      onTap: onPressed,
+      excludeSemantics: true,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Material(
+          color: colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
-          child: Center(child: child),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(12),
+            child: Center(child: child),
+          ),
         ),
       ),
     );

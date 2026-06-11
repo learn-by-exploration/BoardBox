@@ -577,14 +577,19 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   Widget _buildBody(BuildContext context) {
     if (_model == null) {
       if (_generating) {
-        return const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Generating puzzle…'),
-            ],
+        return Center(
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: 'Generating puzzle',
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generating puzzle…'),
+              ],
+            ),
           ),
         );
       }
@@ -592,37 +597,49 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Could not generate a puzzle.',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _generationError!,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _generatePuzzle,
-                  icon: const Icon(Icons.replay_outlined),
-                  label: const Text('Retry'),
-                ),
-              ],
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              label: 'Could not generate a puzzle: ${_generationError!}',
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Could not generate a puzzle.',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _generationError!,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _generatePuzzle,
+                    icon: const Icon(Icons.replay_outlined),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       }
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          label: 'Loading',
+          child: const CircularProgressIndicator(),
+        ),
+      );
     }
     return _buildGame(context);
   }
@@ -735,22 +752,27 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            '$label: $value',
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
+    return Semantics(
+      container: true,
+      label: '$label: $value',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '$label: $value',
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
