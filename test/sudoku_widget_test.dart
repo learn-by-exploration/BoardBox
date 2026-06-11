@@ -463,4 +463,81 @@ void main() {
     // The wrong value is on the board.
     expect(find.text('4'), findsWidgets);
   });
+
+  testWidgets(
+    'wrong entries highlight the cell and erase clears the highlight',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Reset the mistake check + limit so we can enter a single wrong
+      // value without triggering the loss dialog.
+      await SettingsService.instance.setSudokuMistakeChecking(true);
+      await SettingsService.instance.setSudokuMistakesLimit(3);
+
+      final seedModel = SudokuModel(_puzzleWithBlanks([45]));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SudokuGameScreen(
+            difficulty: SudokuDifficulty.easy,
+            saveKey: 'sudoku_save_easy',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap the empty cell at (row 5, col 0) — index 45.
+      final cellFinder = find.bySemanticsLabel(
+        RegExp(r'Row 6 column 1, empty'),
+      );
+      await tester.tap(cellFinder.first, warnIfMissed: false);
+      await tester.pump();
+
+      // Enter a wrong value (solution is 1, so 4 is wrong). The cell
+      // should be highlighted with the error-container background.
+      await tester.tap(find.byKey(const ValueKey('sudoku_pad_4')));
+      await tester.pumpAndSettle();
+
+      // Find the Container holding the wrong cell and check its
+      // background colour. The cell uses `decoration: BoxDecoration(color:
+      // ...)` so we have to look at `decoration?.color`.
+      final errorContainer = Theme.of(
+        tester.element(find.byType(SudokuGameScreen)),
+      ).colorScheme.errorContainer;
+      final hasInvalidBackground = find.descendant(
+        of: find.byType(SudokuBoard),
+        matching: find.byWidgetPredicate((w) {
+          if (w is! Container) return false;
+          final deco = w.decoration;
+          return deco is BoxDecoration && deco.color == errorContainer;
+        }),
+      );
+      expect(
+        hasInvalidBackground,
+        findsWidgets,
+        reason: 'wrong entry should paint the cell with errorContainer',
+      );
+
+      // Now erase the cell and the highlight should disappear.
+      await tester.tap(find.byKey(const ValueKey('sudoku_pad_erase')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(SudokuBoard),
+          matching: find.byWidgetPredicate((w) {
+            if (w is! Container) return false;
+            final deco = w.decoration;
+            return deco is BoxDecoration && deco.color == errorContainer;
+          }),
+        ),
+        findsNothing,
+        reason: 'erasing the cell clears the error highlight',
+      );
+    },
+  );
 }

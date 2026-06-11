@@ -51,6 +51,10 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   bool _gameOverShown = false;
   bool _gameLostShown = false;
 
+  /// Cells currently highlighted as "wrong" (entered a non-solution value).
+  /// Cleared on correct overwrite, undo, or restart.
+  final Set<int> _invalidIndexes = <int>{};
+
   @override
   void initState() {
     super.initState();
@@ -194,6 +198,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     } else {
       model.enterValue(index, n);
     }
+    _refreshInvalidFor(index);
     setState(() {});
 
     if (currentValue != model.values[index] ||
@@ -202,6 +207,24 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     }
     _checkCompletion();
     _checkLoss();
+  }
+
+  /// Recomputes whether [index] should be in [_invalidIndexes] after an
+  /// edit. A cell is "invalid" when its current value is non-zero and
+  /// doesn't match the solution. Erases, correct overwrites, and hint
+  /// reveals clear the flag.
+  void _refreshInvalidFor(int index) {
+    final model = _model;
+    if (model == null) {
+      _invalidIndexes.remove(index);
+      return;
+    }
+    final v = model.values[index];
+    if (v == 0 || v == model.puzzle.solution[index]) {
+      _invalidIndexes.remove(index);
+    } else {
+      _invalidIndexes.add(index);
+    }
   }
 
   void _onErase() {
@@ -224,6 +247,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         model.toggleNote(index, n);
       }
     }
+    _refreshInvalidFor(index);
     setState(() {});
     _scheduleAutosave();
   }
@@ -238,6 +262,11 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     final model = _model;
     if (model == null) return;
     model.restoreSnapshot(values: snapshot.values, notes: snapshot.notes);
+    // Recompute invalid flags for every non-given cell. Restore may have
+    // changed many values at once.
+    for (int i = 0; i < SudokuPuzzle.cellCount; i++) {
+      if (!model.puzzle.isGiven(i)) _refreshInvalidFor(i);
+    }
     setState(() {});
     _scheduleAutosave();
     _checkCompletion();
@@ -253,6 +282,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     if (model.values[index] == model.puzzle.solution[index]) return;
     _pushUndo();
     model.revealHint(index);
+    _refreshInvalidFor(index);
     setState(() {});
     _scheduleAutosave();
     _checkCompletion();
@@ -278,6 +308,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     });
     // Wipe and re-generate. Keep the same difficulty.
     _undoStack.clear();
+    _invalidIndexes.clear();
     _generationError = null;
     _autosaveDebounce?.cancel();
     _gameOverShown = false;
@@ -612,6 +643,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                 model: model,
                 selectedIndex: selected,
                 notesMode: _notesMode,
+                invalidIndexes: _invalidIndexes,
                 onCellSelected: _onCellSelected,
               ),
             ),
