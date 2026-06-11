@@ -26,18 +26,42 @@ class SudokuModel {
   SudokuState state;
   int mistakes = 0;
   int hintsUsed = 0;
+  int elapsedSeconds = 0;
+  bool paused = false;
+
+  /// Soft cap on mistakes. `0` or negative means unlimited (legacy behaviour).
+  /// Stored on the instance so the screen can decide when to enforce it; the
+  /// model itself does not branch on a "lost" state — it just rejects further
+  /// edits via [enterValue] returning `false` once the cap is hit.
+  int mistakesLimit = 0;
 
   UnmodifiableListView<int> get values => UnmodifiableListView(_values);
 
   List<UnmodifiableSetView<int>> get notes =>
       _notes.map(UnmodifiableSetView<int>.new).toList(growable: false);
 
+  /// True when a non-zero [mistakesLimit] is in effect and [mistakes] has
+  /// reached it. The screen uses this to dismiss input and show a game-over
+  /// dialog.
+  bool get isAtMistakeLimit => mistakesLimit > 0 && mistakes >= mistakesLimit;
+
+  /// Advances [elapsedSeconds] by [seconds]. No-op while paused, completed,
+  /// or for non-positive deltas. Callers (the game screen) drive this from a
+  /// 1-second periodic timer.
+  void tick(int seconds) {
+    if (seconds <= 0) return;
+    if (paused) return;
+    if (state is! SudokuPlaying) return;
+    elapsedSeconds += seconds;
+  }
+
   bool enterValue(int index, int value) {
     _checkIndex(index);
     if (state is! SudokuPlaying ||
         puzzle.isGiven(index) ||
         value < 0 ||
-        value > 9) {
+        value > 9 ||
+        isAtMistakeLimit) {
       return false;
     }
 
@@ -112,17 +136,20 @@ class SudokuModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'version': 1,
+    'version': 2,
     'puzzle': puzzle.toJson(),
     'values': _values,
     'notes': _notes.map((notes) => notes.toList()..sort()).toList(),
     'mistakes': mistakes,
     'hintsUsed': hintsUsed,
+    'elapsedSeconds': elapsedSeconds,
+    'paused': paused,
     'completed': state is SudokuCompleted,
   };
 
   factory SudokuModel.fromJson(Map<String, dynamic> json) {
-    if (json['version'] != 1) {
+    final version = json['version'];
+    if (version is! int || version < 1 || version > 2) {
       throw const FormatException('Unsupported Sudoku save version');
     }
     final puzzle = SudokuPuzzle.fromJson(
@@ -132,11 +159,15 @@ class SudokuModel {
     final noteRows = json['notes'] as List;
     final mistakes = json['mistakes'] as int;
     final hintsUsed = json['hintsUsed'] as int;
+    // Version-1 saves did not have timer state — default to a fresh clock.
+    final elapsedSeconds = (json['elapsedSeconds'] as int?) ?? 0;
+    final paused = (json['paused'] as bool?) ?? false;
     if (values.length != SudokuPuzzle.cellCount ||
         noteRows.length != SudokuPuzzle.cellCount ||
         values.any((value) => value < 0 || value > 9) ||
         mistakes < 0 ||
-        hintsUsed < 0) {
+        hintsUsed < 0 ||
+        elapsedSeconds < 0) {
       throw const FormatException('Invalid Sudoku save data');
     }
 
@@ -153,7 +184,8 @@ class SudokuModel {
       .._values = List<int>.from(values)
       .._notes = parsedNotes
       ..mistakes = mistakes
-      ..hintsUsed = hintsUsed;
+      ..hintsUsed = hintsUsed
+      ..elapsedSeconds = elapsedSeconds;
 
     for (int index = 0; index < SudokuPuzzle.cellCount; index++) {
       if (puzzle.isGiven(index) &&
@@ -168,7 +200,13 @@ class SudokuModel {
     if ((json['completed'] as bool) != isComplete) {
       throw const FormatException('Sudoku completion state is inconsistent');
     }
+    if (paused && isComplete) {
+      // A completed puzzle cannot logically be paused — flag it as corrupt so
+      // the restore pipeline clears the save and starts fresh.
+      throw const FormatException('Sudoku paused state is inconsistent');
+    }
     model.state = isComplete ? const SudokuCompleted() : const SudokuPlaying();
+    model.paused = paused && !isComplete;
     return model;
   }
 

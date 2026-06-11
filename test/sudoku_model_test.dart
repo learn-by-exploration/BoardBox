@@ -224,6 +224,100 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
     });
+
+    test('tick advances elapsed only while playing and not paused', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]));
+
+      model.tick(1);
+      expect(model.elapsedSeconds, 1);
+
+      model.tick(2);
+      expect(model.elapsedSeconds, 3);
+
+      model.paused = true;
+      model.tick(5);
+      expect(model.elapsedSeconds, 3, reason: 'paused ticks are dropped');
+
+      model.paused = false;
+      model.tick(0);
+      expect(model.elapsedSeconds, 3, reason: 'zero or negative ticks no-op');
+      model.tick(-1);
+      expect(model.elapsedSeconds, 3);
+    });
+
+    test('tick stops advancing after the puzzle is completed', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]));
+      model.tick(5);
+      expect(model.elapsedSeconds, 5);
+
+      // Fill the last two cells correctly -> completed.
+      model.enterValue(0, 5);
+      model.enterValue(1, 3);
+      expect(model.state, isA<SudokuCompleted>());
+
+      model.tick(10);
+      expect(model.elapsedSeconds, 5, reason: 'timer freezes on completion');
+    });
+
+    test('save data round-trips elapsedSeconds and paused', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]))
+        ..elapsedSeconds = 42
+        ..paused = true;
+
+      final restored = SudokuModel.fromJson(model.toJson());
+      expect(restored.elapsedSeconds, 42);
+      expect(restored.paused, isTrue);
+    });
+
+    test('fromJson defaults elapsedSeconds and paused for legacy v1 saves', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]));
+      final json = model.toJson()
+        ..['version'] = 1
+        ..remove('elapsedSeconds')
+        ..remove('paused');
+
+      final restored = SudokuModel.fromJson(json);
+      expect(restored.elapsedSeconds, 0);
+      expect(restored.paused, isFalse);
+    });
+
+    test('fromJson rejects paused paired with a completed state', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]));
+      final json = model.toJson()
+        ..['paused'] = true
+        ..['completed'] = true;
+
+      expect(() => SudokuModel.fromJson(json), throwsA(isA<FormatException>()));
+    });
+
+    test('fromJson rejects negative elapsedSeconds', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]));
+      final json = model.toJson()..['elapsedSeconds'] = -1;
+
+      expect(() => SudokuModel.fromJson(json), throwsA(isA<FormatException>()));
+    });
+
+    test('isAtMistakeLimit reports the configured cap', () {
+      final model = SudokuModel(puzzleWithBlanks([0]))..mistakesLimit = 0;
+      expect(model.isAtMistakeLimit, isFalse);
+      model.mistakesLimit = 2;
+      model.enterValue(0, 4); // 1 mistake
+      expect(model.isAtMistakeLimit, isFalse);
+      model.enterValue(0, 5); // correct over-write; mistake counter unchanged
+      // Fill a different blank so the next wrong entry lands.
+      // The puzzle only has [0] blanked in this fixture, so we use a fresh
+      // model with two blanks for the limit-hit case.
+    });
+
+    test('enterValue is rejected once the mistake limit is hit', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]))..mistakesLimit = 1;
+      expect(model.enterValue(0, 4), isTrue); // 1 mistake
+      expect(model.isAtMistakeLimit, isTrue);
+      // Any further edit is rejected — even a correct one.
+      expect(model.enterValue(1, 3), isFalse);
+      expect(model.values[1], 0);
+      expect(model.mistakes, 1);
+    });
   });
 
   test('factory generates a valid puzzle with one solution', () {
