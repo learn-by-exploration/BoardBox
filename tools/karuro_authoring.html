@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Karuro Authoring Tool</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #1a1d27;
+      --panel-2: #232734;
+      --text: #e7e9ee;
+      --muted: #8a8f9d;
+      --accent: #5c35cc;
+      --good: #2e7d32;
+      --bad: #c62828;
+      --warn: #ef6c00;
+      --border: #353a4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      gap: 16px;
+      padding: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .panel h2 {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+    }
+    textarea { font-family: ui-monospace, Menlo, monospace; }
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    button.ghost { background: var(--panel-2); border-color: var(--border); color: var(--text); }
+    button:hover { opacity: 0.9; }
+    button + button { margin-top: 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .field { margin-bottom: 12px; }
+
+    .grid-wrap { display: flex; justify-content: center; align-items: flex-start; padding: 8px; }
+    .grid {
+      display: grid;
+      gap: 2px;
+      background: var(--border);
+      padding: 2px;
+      border-radius: 4px;
+    }
+    .cell {
+      width: 36px;
+      height: 36px;
+      background: var(--panel-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    .cell.block { background: #0c0e14; color: var(--muted); }
+    .cell.entry { background: #f5f5f7; color: #0f1117; }
+    .cell.clue-start { box-shadow: inset 0 0 0 2px var(--accent); }
+    .cell.bad { background: #5c1f1f; color: #ffd2d2; }
+    .cell .badge {
+      position: absolute;
+      top: 1px;
+      left: 2px;
+      font-size: 8px;
+      color: var(--accent);
+      pointer-events: none;
+    }
+
+    .entry-list { font-size: 12px; }
+    .entry-list .row {
+      grid-template-columns: 48px 60px 1fr 24px;
+      gap: 4px;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .entry-list .row .id { color: var(--accent); font-weight: 700; }
+    .entry-list .row .dir { color: var(--muted); }
+    .entry-list .row .val { font-family: ui-monospace, Menlo, monospace; }
+    .entry-list .row .del {
+      background: none;
+      border: none;
+      color: var(--bad);
+      cursor: pointer;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    .status { font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-top: 12px; }
+    .status.ok { background: rgba(46,125,50,0.15); color: #6dd876; }
+    .status.bad { background: rgba(198,40,40,0.15); color: #ff9a9a; }
+
+    .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    kbd {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Karuro Authoring Tool</h1>
+    <div class="sub">Build and validate Karuro puzzles · JSON output drops into <code>assets/puzzles/karuro/</code></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Puzzle metadata</h2>
+      <div class="field">
+        <label>ID (e.g. <code>karuro-002</code>)</label>
+        <input id="meta-id" value="karuro-002" />
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input id="meta-title" value="Untitled" />
+      </div>
+      <div class="field">
+        <label>Difficulty</label>
+        <select id="meta-difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Rows</label>
+          <input id="meta-rows" type="number" min="3" max="15" value="5" />
+        </div>
+        <div class="field">
+          <label>Cols</label>
+          <input id="meta-cols" type="number" min="3" max="15" value="5" />
+        </div>
+      </div>
+      <button class="ghost" id="btn-resize">Resize grid</button>
+
+      <h2 style="margin-top:20px">Selected entry</h2>
+      <div id="selected-entry">
+        <div class="hint">Click a clue-start cell to edit its entry.</div>
+      </div>
+
+      <h2 style="margin-top:20px">Add entry</h2>
+      <div class="row">
+        <div class="field">
+          <label>Kind</label>
+          <select id="new-kind">
+            <option value="number">Number (sum)</option>
+            <option value="word">Word (clue)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Direction</label>
+          <select id="new-direction">
+            <option value="across">Across</option>
+            <option value="down">Down</option>
+          </select>
+        </div>
+      </div>
+      <button id="btn-add-entry" class="ghost">Add entry at next click</button>
+      <div class="hint">After clicking, the start cell is set; drag or click more cells to extend.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Grid <span class="hint" style="display:inline;text-transform:none;letter-spacing:0">· click to toggle block · <kbd>D</kbd> for down · <kbd>A</kbd> for across</span></h2>
+      <div class="grid-wrap">
+        <div id="grid" class="grid"></div>
+      </div>
+      <div id="status" class="status ok">Ready.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Solution (per cell)</h2>
+      <div class="hint">Click any entry cell and type a character to set the solution value. Uppercased on export.</div>
+      <div class="field" style="margin-top:8px">
+        <label>Selected cell</label>
+        <input id="cell-input" placeholder="r,c" disabled />
+      </div>
+      <div class="field">
+        <label>Value (digit 1-9 or letter A-Z)</label>
+        <input id="cell-value" maxlength="1" disabled />
+      </div>
+      <button class="ghost" id="btn-set-value" disabled>Set value</button>
+
+      <h2 style="margin-top:20px">Entries</h2>
+      <div id="entry-list" class="entry-list"></div>
+
+      <h2 style="margin-top:20px">Export</h2>
+      <textarea id="export" rows="10"></textarea>
+      <button id="btn-copy">Copy JSON</button>
+      <button class="ghost" id="btn-download">Download .json</button>
+    </section>
+  </main>
+
+  <script>
+    // -------- State --------
+    const state = {
+      id: 'karuro-002',
+      title: 'Untitled',
+      difficulty: 'easy',
+      rows: 5,
+      cols: 5,
+      // grid[r][c] = '#' (block) or ' ' (entry)
+      grid: [],
+      // entries: { id, number, direction, startRow, startCol, length, kind, sum?, clue?, answer? }
+      entries: [],
+      // solution: { 'r,c': 'A' }
+      solution: {},
+      // transient UI state
+      pendingStart: null,
+      pendingCells: [],
+      selectedEntry: null, // index
+      selectedCell: null,
+    };
+
+    function emptyGrid(rows, cols) {
+      return Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => ' '),
+      );
+    }
+
+    function freshState() {
+      state.grid = emptyGrid(state.rows, state.cols);
+      state.entries = [];
+      state.solution = {};
+      state.selectedEntry = null;
+      state.selectedCell = null;
+      state.pendingStart = null;
+      state.pendingCells = [];
+    }
+
+    freshState();
+
+    // -------- DOM --------
+    const grid = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const entryListEl = document.getElementById('entry-list');
+    const exportEl = document.getElementById('export');
+    const cellInputEl = document.getElementById('cell-input');
+    const cellValueEl = document.getElementById('cell-value');
+    const btnSetValue = document.getElementById('btn-set-value');
+
+    function render() {
+      grid.style.gridTemplateColumns = `repeat(${state.cols}, 36px)`;
+      grid.style.gridTemplateRows = `repeat(${state.rows}, 36px)`;
+      grid.innerHTML = '';
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          const cell = document.createElement('div');
+          const isBlock = state.grid[r][c] === '#';
+          cell.className = 'cell ' + (isBlock ? 'block' : 'entry');
+          // Clue badge: any entry whose start is here.
+          const startEntry = state.entries.find(
+            e => e.startRow === r && e.startCol === c,
+          );
+          if (startEntry) {
+            cell.classList.add('clue-start');
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = startEntry.number;
+            cell.appendChild(badge);
+          }
+          // Solution char
+          const sv = state.solution[`${r},${c}`];
+          if (sv && !isBlock) cell.textContent = sv;
+          // Highlight bad
+          if (state.grid[r][c] === 'X') {
+            cell.classList.add('bad');
+            state.grid[r][c] = '#';
+          }
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+          cell.addEventListener('click', onCellClick);
+          grid.appendChild(cell);
+        }
+      }
+      // Re-mark bad cells (X is a transient marker)
+      renderEntries();
+      renderExport();
+    }
+
+    function setStatus(text, ok) {
+      statusEl.textContent = text;
+      statusEl.className = 'status ' + (ok ? 'ok' : 'bad');
+    }
+
+    function onCellClick(e) {
+      const r = parseInt(e.currentTarget.dataset.r, 10);
+      const c = parseInt(e.currentTarget.dataset.c, 10);
+
+      // If we're placing a new entry, accumulate cells
+      if (state.pendingStart) {
+        const dr = state.pendingDirection === 'across' ? 0 : 1;
+        const dc = state.pendingDirection === 'across' ? 1 : 0;
+        const startR = state.pendingStart.r;
+        const startC = state.pendingStart.c;
+        if (state.pendingCells.length === 0) {
+          if ((r - startR) * dr >= 0 && (c - startC) * dc >= 0 && (dr === 0 ? r === startR : c === startC)) {
+            state.pendingCells.push({ r, c });
+            setStatus(`Cell (${r},${c}) added. Click more cells in ${state.pendingDirection}, or press Enter to finish.`, true);
+          } else {
+            setStatus(`Pick a cell in the ${state.pendingDirection} direction from the start.`, false);
+          }
+        } else {
+          const last = state.pendingCells[state.pendingCells.length - 1];
+          if (dr === 0 ? r === last.r && c === last.c + 1 : c === last.c && r === last.r + 1) {
+            if (state.grid[r][c] !== '#') {
+              state.pendingCells.push({ r, c });
+              setStatus(`Cell (${r},${c}) added. Click more or press Enter to finish.`, true);
+            } else {
+              setStatus('Cannot extend into a block cell.', false);
+            }
+          } else {
+            setStatus(`Extend one cell at a time in the ${state.pendingDirection} direction.`, false);
+          }
+        }
+        render();
+        return;
+      }
+
+      // Else: toggle block / select cell
+      if (e.shiftKey) {
+        // Select cell for solution editing
+        if (state.grid[r][c] !== '#') {
+          state.selectedCell = { r, c };
+          cellInputEl.value = `${r},${c}`;
+          cellInputEl.disabled = false;
+          cellValueEl.disabled = false;
+          cellValueEl.value = state.solution[`${r},${c}`] || '';
+          btnSetValue.disabled = false;
+          cellValueEl.focus();
+        } else {
+          setStatus('Cannot set solution on a block cell.', false);
+        }
+        return;
+      }
+
+      // Toggle block
+      const wasBlock = state.grid[r][c] === '#';
+      if (wasBlock) {
+        state.grid[r][c] = ' ';
+      } else {
+        state.grid[r][c] = '#';
+        // Wipe any entries that touched this cell
+        state.entries = state.entries.filter(e => {
+          const dr = e.direction === 'across' ? 0 : 1;
+          const dc = e.direction === 'across' ? 1 : 0;
+          for (let i = 0; i < e.length; i++) {
+            if (e.startRow + dr * i === r && e.startCol + dc * i === c) return false;
+          }
+          return true;
+        });
+        delete state.solution[`${r},${c}`];
+      }
+      render();
+    }
+
+    // -------- New entry flow --------
+    document.getElementById('btn-add-entry').addEventListener('click', () => {
+      const kind = document.getElementById('new-kind').value;
+      const dir = document.getElementById('new-direction').value;
+      state.pendingKind = kind;
+      state.pendingDirection = dir;
+      state.pendingStart = null;
+      state.pendingCells = [];
+      setStatus(`Click the start cell for the new ${kind} ${dir} entry.`, true);
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && state.pendingStart) {
+        finalizeEntry();
+      } else if (e.key === 'Escape') {
+        state.pendingStart = null;
+        state.pendingCells = [];
+        setStatus('Cancelled entry placement.', true);
+        render();
+      }
+    });
+
+    function finalizeEntry() {
+      if (!state.pendingStart || state.pendingCells.length === 0) {
+        setStatus('Need at least one cell.', false);
+        return;
+      }
+      const length = state.pendingCells.length;
+      const number = state.entries.length === 0
+        ? 1
+        : Math.max(...state.entries.map(e => e.number)) + 1;
+      const entry = {
+        id: `${number}${state.pendingDirection === 'across' ? 'A' : 'D'}`,
+        number,
+        direction: state.pendingDirection,
+        startRow: state.pendingStart.r,
+        startCol: state.pendingStart.c,
+        length,
+        kind: state.pendingKind,
+      };
+      if (state.pendingKind === 'number') {
+        const sum = state.pendingCells.reduce((acc, cell) => {
+          const v = state.solution[`${cell.r},${cell.c}`];
+          return acc + (v ? parseInt(v, 10) : 0);
+        }, 0);
+        entry.sum = sum;
+        // Validate numeric rules: no repeats (if filled)
+        const digits = state.pendingCells.map(cell => state.solution[`${cell.r},${cell.c}`]).filter(Boolean);
+        if (new Set(digits).size !== digits.length) {
+          setStatus(`Numeric entry has duplicate digits in its solution — fix before saving.`, false);
+        }
+      } else {
+        // Word entry: build answer from solution
+        const answer = state.pendingCells.map(cell => state.solution[`${cell.r},${cell.c}`] || '?').join('');
+        entry.clue = '';
+        entry.answer = answer;
+      }
+      state.entries.push(entry);
+      state.pendingStart = null;
+      state.pendingCells = [];
+      setStatus(`Added entry ${entry.id} (${entry.kind}, ${entry.direction}, length ${entry.length}).`, true);
+      render();
+    }
+
+    // -------- Edit selected entry --------
+    function renderEntries() {
+      entryListEl.innerHTML = '';
+      if (state.entries.length === 0) {
+        entryListEl.innerHTML = '<div class="hint">No entries yet. Use the panel on the left to add one.</div>';
+        return;
+      }
+      for (let i = 0; i < state.entries.length; i++) {
+        const e = state.entries[i];
+        const row = document.createElement('div');
+        row.className = 'row';
+        const id = document.createElement('div');
+        id.className = 'id';
+        id.textContent = e.id;
+        const dir = document.createElement('div');
+        dir.className = 'dir';
+        dir.textContent = e.direction === 'across' ? 'Across' : 'Down';
+        const val = document.createElement('div');
+        val.className = 'val';
+        if (e.kind === 'number') {
+          val.textContent = `sum=${e.sum} len=${e.length}`;
+        } else {
+          val.textContent = `"${e.clue || '?'}" = ${e.answer}`;
+        }
+        const del = document.createElement('button');
+        del.className = 'del';
+        del.textContent = '×';
+        del.addEventListener('click', () => {
+          state.entries.splice(i, 1);
+          render();
+        });
+        row.append(id, dir, val, del);
+        entryListEl.appendChild(row);
+      }
+    }
+
+    // -------- Set cell solution value --------
+    btnSetValue.addEventListener('click', () => {
+      if (!state.selectedCell) return;
+      const v = cellValueEl.value.toUpperCase();
+      if (!/^[1-9A-Z]$/.test(v)) {
+        setStatus('Value must be a digit 1-9 or letter A-Z.', false);
+        return;
+      }
+      state.solution[`${state.selectedCell.r},${state.selectedCell.c}`] = v;
+      setStatus(`Set (${state.selectedCell.r},${state.selectedCell.c}) = ${v}.`, true);
+      render();
+    });
+
+    cellValueEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnSetValue.click();
+    });
+
+    // -------- Resize --------
+    document.getElementById('btn-resize').addEventListener('click', () => {
+      const newRows = parseInt(document.getElementById('meta-rows').value, 10);
+      const newCols = parseInt(document.getElementById('meta-cols').value, 10);
+      if (newRows < 3 || newCols < 3) {
+        setStatus('Rows and cols must be at least 3.', false);
+        return;
+      }
+      state.rows = newRows;
+      state.cols = newCols;
+      freshState();
+      render();
+      setStatus(`Resized to ${newRows}x${newCols}.`, true);
+    });
+
+    // -------- Export --------
+    function buildMetrics() {
+      let maxNum = 0, maxWord = 0;
+      let extremeCount = 0, numCount = 0;
+      for (const e of state.entries) {
+        if (e.kind === 'number') {
+          maxNum = Math.max(maxNum, e.length);
+          numCount++;
+          // Easy extremes for length L: sum in [L, 2L] is "low" (any digit 1); sum in [9L-?, 9L] is high
+          // A run is "extreme" if every digit would have to be 1 OR 9.
+          const minSum = e.length; // all 1s
+          const maxSum = 9 * e.length; // all 9s
+          if (e.sum === minSum || e.sum === maxSum) extremeCount++;
+        } else {
+          maxWord = Math.max(maxWord, e.length);
+        }
+      }
+      // Crossings: per-cell, count how many entries touch it
+      const cells = {};
+      for (const e of state.entries) {
+        const dr = e.direction === 'across' ? 0 : 1;
+        const dc = e.direction === 'across' ? 1 : 0;
+        for (let i = 0; i < e.length; i++) {
+          const k = `${e.startRow + dr * i},${e.startCol + dc * i}`;
+          cells[k] = (cells[k] || 0) + 1;
+        }
+      }
+      const total = Object.values(cells).reduce((a, b) => a + b, 0);
+      const n = Object.keys(cells).length || 1;
+      const crossings = total / n;
+      return {
+        maxNumericRunLength: maxNum,
+        maxWordRunLength: maxWord,
+        crossingsPerCell: Math.round(crossings * 100) / 100,
+        extremeSumShare: numCount === 0 ? 0 : Math.round((extremeCount / numCount) * 100) / 100,
+      };
+    }
+
+    function buildJson() {
+      return {
+        id: document.getElementById('meta-id').value.trim(),
+        title: document.getElementById('meta-title').value.trim(),
+        difficulty: document.getElementById('meta-difficulty').value,
+        metrics: buildMetrics(),
+        grid: { rows: state.rows, cols: state.cols },
+        cells: state.grid,
+        entries: state.entries,
+        solution: state.solution,
+      };
+    }
+
+    function renderExport() {
+      exportEl.value = JSON.stringify(buildJson(), null, 2);
+    }
+
+    document.getElementById('btn-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(exportEl.value);
+        setStatus('JSON copied to clipboard.', true);
+      } catch (e) {
+        setStatus('Copy failed — select the text manually.', false);
+      }
+    });
+
+    document.getElementById('btn-download').addEventListener('click', () => {
+      const blob = new Blob([exportEl.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${document.getElementById('meta-id').value.trim()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Initial paint
+    document.getElementById('meta-id').addEventListener('input', renderExport);
+    document.getElementById('meta-title').addEventListener('input', renderExport);
+    document.getElementById('meta-difficulty').addEventListener('input', renderExport);
+    render();
+  </script>
+</body>
+</html>

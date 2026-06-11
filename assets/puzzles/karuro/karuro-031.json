@@ -1,0 +1,108 @@
+{
+  "id": "karuro-031",
+  "title": "Star Burst",
+  "difficulty": "hard",
+  "metrics": {
+    "maxNumericRunLength": 7,
+    "maxWordRunLength": 5,
+    "crossingsPerCell": 2.0,
+    "extremeSumShare": 0.0
+  },
+  "grid": { "rows": 9, "cols": 9 },
+  "cells": [
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"]
+  ],
+  "entries": [
+    {
+      "id": "1A",
+      "number": 1,
+      "direction": "across",
+      "start": { "row": 1, "col": 1 },
+      "length": 3,
+      "kind": "word",
+      "clue": "Night bird",
+      "answer": "OWL"
+    },
+    {
+      "id": "2A",
+      "number": 2,
+      "direction": "across",
+      "start": { "row": 2, "col": 1 },
+      "length": 4,
+      "kind": "word",
+      "clue": "Hot flame",
+      "answer": "FIRE"
+    },
+    {
+      "id": "3A",
+      "number": 3,
+      "direction": "across",
+      "start": { "row": 3, "col": 1 },
+      "length": 5,
+      "kind": "word",
+      "clue": "Communication device",
+      "answer": "PHONE"
+    },
+    {
+      "id": "4D",
+      "number": 4,
+      "direction": "down",
+      "start": { "row": 5, "col": 5 },
+      "length": 3,
+      "kind": "number",
+      "sum": 16
+    },
+    {
+      "id": "5D",
+      "number": 5,
+      "direction": "down",
+      "start": { "row": 5, "col": 6 },
+      "length": 3,
+      "kind": "number",
+      "sum": 19
+    },
+    {
+      "id": "6D",
+      "number": 6,
+      "direction": "down",
+      "start": { "row": 5, "col": 7 },
+      "length": 3,
+      "kind": "number",
+      "sum": 21
+    },
+    {
+      "id": "7A",
+      "number": 7,
+      "direction": "across",
+      "start": { "row": 5, "col": 1 },
+      "length": 7,
+      "kind": "number",
+      "sum": 29
+    },
+    {
+      "id": "8A",
+      "number": 8,
+      "direction": "across",
+      "start": { "row": 7, "col": 1 },
+      "length": 7,
+      "kind": "number",
+      "sum": 31
+    }
+  ],
+  "solution": {
+    "1,1": "O", "1,2": "W", "1,3": "L",
+    "2,1": "F", "2,2": "I", "2,3": "R", "2,4": "E",
+    "3,1": "P", "3,2": "H", "3,3": "O", "3,4": "N", "3,5": "E",
+    "5,1": "1", "5,2": "2", "5,3": "3", "5,4": "4", "5,5": "5", "5,6": "6", "5,7": "8",
+    "6,5": "4", "6,6": "5", "6,7": "7",
+    "7,1": "1", "7,2": "2", "7,3": "3", "7,4": "4", "7,5": "7", "7,6": "8", "7,7": "6"
+  }
+}

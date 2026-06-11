@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show FlutterError;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:common_games/games/karuro/karuro_assets.dart';
+import 'package:common_games/games/karuro/karuro_model.dart';
 import 'package:common_games/games/karuro/karuro_puzzle.dart';
 
 void main() {
@@ -168,6 +171,97 @@ void main() {
       expect(medium.map((p) => p.id), ['medium-1']);
       final hard = await loader.byDifficulty(KaruroDifficulty.hard);
       expect(hard, isEmpty);
+    });
+  });
+
+  group('KaruroAssets — bundled puzzles', () {
+    // These tests load the real `assets/puzzles/karuro/` bundle. They
+    // catch schema drift, missing-index entries, and authored-but-broken
+    // puzzles that the mock-bundle tests above can't see.
+    late KaruroAssets loader;
+    late List<KaruroPuzzle> puzzles;
+
+    setUpAll(() async {
+      loader = KaruroAssets();
+      puzzles = await loader.all();
+    });
+
+    test('index.json lists 41 puzzles and every entry parses', () {
+      expect(puzzles, hasLength(41));
+      // ids must be unique and in lexicographic order
+      final ids = puzzles.map((p) => p.id).toList();
+      expect(ids.toSet(), hasLength(41));
+      final sorted = [...ids]..sort();
+      expect(ids, sorted);
+    });
+
+    test('every puzzle has a difficulty bucket and at least one entry', () {
+      for (final p in puzzles) {
+        expect(
+          KaruroDifficulty.values,
+          contains(p.difficulty),
+          reason: '${p.id} has an unknown difficulty ${p.difficulty}',
+        );
+        expect(p.entries, isNotEmpty, reason: '${p.id} has no entries');
+      }
+    });
+
+    test('metrics reflect the actual entries', () {
+      for (final p in puzzles) {
+        int maxNumeric = 0;
+        int maxWord = 0;
+        for (final e in p.entries) {
+          if (e is KaruroNumberEntry) {
+            maxNumeric = math.max(maxNumeric, e.length);
+          } else if (e is KaruroWordEntry) {
+            maxWord = math.max(maxWord, e.length);
+          }
+        }
+        expect(
+          p.metrics.maxNumericRunLength,
+          maxNumeric,
+          reason: '${p.id} metric maxNumericRunLength mismatch',
+        );
+        expect(
+          p.metrics.maxWordRunLength,
+          maxWord,
+          reason: '${p.id} metric maxWordRunLength mismatch',
+        );
+        // extremeSumShare is in [0, 1]
+        expect(p.metrics.extremeSumShare, inInclusiveRange(0, 1));
+        expect(p.metrics.crossingsPerCell, greaterThanOrEqualTo(0));
+      }
+    });
+
+    test('difficulty distribution matches the bundle (15/14/12)', () {
+      final easy = puzzles.where((p) => p.difficulty == KaruroDifficulty.easy);
+      final medium = puzzles.where(
+        (p) => p.difficulty == KaruroDifficulty.medium,
+      );
+      final hard = puzzles.where((p) => p.difficulty == KaruroDifficulty.hard);
+      expect(easy, hasLength(15));
+      expect(medium, hasLength(14));
+      expect(hard, hasLength(12));
+    });
+
+    test('entering the solution for two puzzles flips isWon', () {
+      for (final p in puzzles.take(2)) {
+        final model = KaruroModel(p);
+        for (int r = 0; r < p.rows; r++) {
+          for (int c = 0; c < p.cols; c++) {
+            if (p.cells[r][c] is! KaruroEntryCell) continue;
+            final v = p.solutionAt(r, c);
+            if (v == null) continue;
+            model.enterValue(r, c, v);
+          }
+        }
+        expect(
+          model.isWon,
+          isTrue,
+          reason: '${p.id} solution did not flip isWon',
+        );
+        expect(model.state, isA<KaruroWon>());
+      }
     });
   });
 }

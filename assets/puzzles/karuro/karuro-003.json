@@ -1,12 +1,12 @@
 {
-  "id": "karuro-001",
-  "title": "Sunny Start",
+  "id": "karuro-003",
+  "title": "Logic Loop",
   "difficulty": "easy",
   "metrics": {
     "maxNumericRunLength": 3,
-    "maxWordRunLength": 3,
-    "crossingsPerCell": 2,
-    "extremeSumShare": 0.0
+    "maxWordRunLength": 0,
+    "crossingsPerCell": 2.0,
+    "extremeSumShare": 0.33
   },
   "grid": { "rows": 5, "cols": 5 },
   "cells": [
@@ -22,9 +22,9 @@
       "number": 1,
       "direction": "across",
       "start": { "row": 1, "col": 1 },
-      "length": 2,
+      "length": 3,
       "kind": "number",
-      "sum": 3
+      "sum": 24
     },
     {
       "id": "1D",
@@ -33,7 +33,7 @@
       "start": { "row": 1, "col": 1 },
       "length": 3,
       "kind": "number",
-      "sum": 15
+      "sum": 23
     },
     {
       "id": "2D",
@@ -41,14 +41,13 @@
       "direction": "down",
       "start": { "row": 1, "col": 3 },
       "length": 3,
-      "kind": "word",
-      "clue": "Feline pet",
-      "answer": "CAT"
+      "kind": "number",
+      "sum": 14
     }
   ],
   "solution": {
-    "1,1": "1", "1,2": "2",
-    "2,1": "5", "3,1": "9",
-    "1,3": "C", "2,3": "A", "3,3": "T"
+    "1,1": "7", "1,2": "8", "1,3": "9",
+    "2,1": "6", "3,1": "9",
+    "2,3": "1", "3,3": "4"
   }
 }

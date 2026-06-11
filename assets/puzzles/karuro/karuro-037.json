@@ -1,0 +1,108 @@
+{
+  "id": "karuro-037",
+  "title": "Tiger Eye",
+  "difficulty": "hard",
+  "metrics": {
+    "maxNumericRunLength": 7,
+    "maxWordRunLength": 5,
+    "crossingsPerCell": 2.0,
+    "extremeSumShare": 0.0
+  },
+  "grid": { "rows": 9, "cols": 9 },
+  "cells": [
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", " ", " ", " ", " ", " ", " ", " ", "#"],
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#"]
+  ],
+  "entries": [
+    {
+      "id": "1A",
+      "number": 1,
+      "direction": "across",
+      "start": { "row": 1, "col": 1 },
+      "length": 4,
+      "kind": "word",
+      "clue": "Green stone",
+      "answer": "JADE"
+    },
+    {
+      "id": "2A",
+      "number": 2,
+      "direction": "across",
+      "start": { "row": 2, "col": 1 },
+      "length": 3,
+      "kind": "word",
+      "clue": "Mighty tree",
+      "answer": "OAK"
+    },
+    {
+      "id": "3A",
+      "number": 3,
+      "direction": "across",
+      "start": { "row": 3, "col": 1 },
+      "length": 5,
+      "kind": "word",
+      "clue": "Musical keys",
+      "answer": "PIANO"
+    },
+    {
+      "id": "4D",
+      "number": 4,
+      "direction": "down",
+      "start": { "row": 5, "col": 5 },
+      "length": 3,
+      "kind": "number",
+      "sum": 14
+    },
+    {
+      "id": "5D",
+      "number": 5,
+      "direction": "down",
+      "start": { "row": 5, "col": 6 },
+      "length": 3,
+      "kind": "number",
+      "sum": 17
+    },
+    {
+      "id": "6D",
+      "number": 6,
+      "direction": "down",
+      "start": { "row": 5, "col": 7 },
+      "length": 3,
+      "kind": "number",
+      "sum": 19
+    },
+    {
+      "id": "7A",
+      "number": 7,
+      "direction": "across",
+      "start": { "row": 5, "col": 1 },
+      "length": 7,
+      "kind": "number",
+      "sum": 33
+    },
+    {
+      "id": "8A",
+      "number": 8,
+      "direction": "across",
+      "start": { "row": 7, "col": 1 },
+      "length": 7,
+      "kind": "number",
+      "sum": 28
+    }
+  ],
+  "solution": {
+    "1,1": "J", "1,2": "A", "1,3": "D", "1,4": "E",
+    "2,1": "O", "2,2": "A", "2,3": "K",
+    "3,1": "P", "3,2": "I", "3,3": "A", "3,4": "N", "3,5": "O",
+    "5,1": "1", "5,2": "2", "5,3": "4", "5,4": "5", "5,5": "6", "5,6": "7", "5,7": "8",
+    "6,5": "3", "6,6": "4", "6,7": "4",
+    "7,1": "1", "7,2": "2", "7,3": "3", "7,4": "4", "7,5": "5", "7,6": "6", "7,7": "7"
+  }
+}

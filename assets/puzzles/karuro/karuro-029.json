@@ -1,0 +1,77 @@
+{
+  "id": "karuro-029",
+  "title": "Deep Sleep",
+  "difficulty": "medium",
+  "metrics": {
+    "maxNumericRunLength": 5,
+    "maxWordRunLength": 5,
+    "crossingsPerCell": 2.0,
+    "extremeSumShare": 0.0
+  },
+  "grid": { "rows": 7, "cols": 7 },
+  "cells": [
+    ["#", "#", "#", "#", "#", "#", "#"],
+    ["#", " ", " ", "#", " ", " ", "#"],
+    ["#", " ", " ", "#", " ", " ", "#"],
+    ["#", " ", " ", "#", " ", " ", "#"],
+    ["#", " ", " ", "#", " ", " ", "#"],
+    ["#", " ", " ", "#", " ", " ", "#"],
+    ["#", "#", "#", "#", "#", "#", "#"]
+  ],
+  "entries": [
+    {
+      "id": "1A",
+      "number": 1,
+      "direction": "across",
+      "start": { "row": 1, "col": 4 },
+      "length": 2,
+      "kind": "number",
+      "sum": 10
+    },
+    {
+      "id": "1D",
+      "number": 1,
+      "direction": "down",
+      "start": { "row": 1, "col": 5 },
+      "length": 5,
+      "kind": "number",
+      "sum": 22
+    },
+    {
+      "id": "2A",
+      "number": 2,
+      "direction": "across",
+      "start": { "row": 3, "col": 4 },
+      "length": 2,
+      "kind": "number",
+      "sum": 13
+    },
+    {
+      "id": "3A",
+      "number": 3,
+      "direction": "across",
+      "start": { "row": 5, "col": 4 },
+      "length": 2,
+      "kind": "number",
+      "sum": 11
+    },
+    {
+      "id": "4D",
+      "number": 4,
+      "direction": "down",
+      "start": { "row": 1, "col": 1 },
+      "length": 5,
+      "kind": "word",
+      "clue": "Tiny rodent",
+      "answer": "MOUSE"
+    }
+  ],
+  "solution": {
+    "1,1": "M", "2,1": "O", "3,1": "U", "4,1": "S", "5,1": "E",
+    "1,4": "4", "1,5": "6",
+    "2,5": "1",
+    "3,4": "4", "3,5": "9",
+    "4,5": "4",
+    "5,4": "9", "5,5": "2"
+  }
+}
