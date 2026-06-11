@@ -26,4 +26,9 @@ class HapticService {
   static void onSelect() {
     if (SettingsService.instance.hapticsEnabled) HapticFeedback.lightImpact();
   }
+
+  /// Stronger buzz — wrong entry (e.g. Sudoku digit that doesn't fit).
+  static void onError() {
+    if (SettingsService.instance.hapticsEnabled) HapticFeedback.vibrate();
+  }
 }

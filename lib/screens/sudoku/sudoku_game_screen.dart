@@ -198,6 +198,13 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     } else {
       model.enterValue(index, n);
     }
+    // Error feedback: a wrong value (non-zero, non-solution) gets a
+    // stronger buzz. Correct entries stay quiet (the cell-highlight
+    // colour change is the cue).
+    final newValue = model.values[index];
+    if (n != 0 && newValue != 0 && newValue != model.puzzle.solution[index]) {
+      HapticService.onError();
+    }
     _refreshInvalidFor(index);
     setState(() {});
 
