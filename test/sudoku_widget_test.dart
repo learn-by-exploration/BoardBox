@@ -540,4 +540,249 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'selecting a cell highlights its row, column, box, and matching digits',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Use a model where cells in row 4, col 4, and the centre box
+      // are mostly empty. That gives us room to verify the highlight
+      // tier (which is only painted on non-selected, non-invalid,
+      // non-fixed cells). The selected cell at index 40 stays empty
+      // (so the matching-digit path is a no-op), and the rest of the
+      // highlight peers — except for the givens at (4,0) [3] and
+      // (0,4) [7] and a few others — are also blanks. We assert via
+      // the count: row ∪ col ∪ box yields 20 cells, of which some
+      // are givens (kept on surfaceContainerHighest) and the rest
+      // should be on surfaceContainerLow.
+      final blankIndexes = <int>{
+        // Row 4
+        36, 37, 38, 39, 40, 41, 42, 43, 44,
+        // Col 4 minus row 4
+        4, 13, 22, 31, 49, 58, 67, 76,
+        // Box (3,3)-(5,5) minus row 4 and col 4
+        30, 32, 48, 50,
+      };
+      final seedModel = SudokuModel(_puzzleWithBlanks(blankIndexes));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SudokuGameScreen(
+            difficulty: SudokuDifficulty.easy,
+            saveKey: 'sudoku_save_easy',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Compute the expected highlight set: row 4 ∪ col 4 ∪ box
+      // (3,3)-(5,5), excluding 40 itself. The matching-digit path is
+      // disabled because the selected cell is empty.
+      const selectedIndex = 40;
+      final expected = <int>{};
+      const selectedRow = selectedIndex ~/ 9;
+      const selectedCol = selectedIndex % 9;
+      const boxRowStart = (selectedRow ~/ 3) * 3;
+      const boxColStart = (selectedCol ~/ 3) * 3;
+      for (int i = 0; i < 81; i++) {
+        if (i == selectedIndex) continue;
+        final r = i ~/ 9;
+        final c = i % 9;
+        final inRow = r == selectedRow;
+        final inCol = c == selectedCol;
+        final inBox =
+            r >= boxRowStart &&
+            r < boxRowStart + 3 &&
+            c >= boxColStart &&
+            c < boxColStart + 3;
+        if (inRow || inCol || inBox) expected.add(i);
+      }
+      // 8 (row) + 8 (col) + 6 (box-only, excluding row/col) = 20.
+      expect(expected.length, 20);
+
+      // Select the empty cell at (row 4, col 4).
+      final cellFinder = find.bySemanticsLabel(
+        RegExp(r'Row 5 column 5, empty'),
+      );
+      expect(cellFinder, findsOneWidget);
+      await tester.tap(cellFinder.first, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      handle.dispose();
+
+      // Walk every non-selected cell and read its background colour.
+      final colorScheme = Theme.of(
+        tester.element(find.byType(SudokuGameScreen)),
+      ).colorScheme;
+
+      // Build a list of all 81 cell containers in render order (row
+      // major). The first container is the outer board wrapper; the
+      // next 81 are the cells.
+      final cellContainers = find.descendant(
+        of: find.byType(SudokuBoard),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).color != null,
+        ),
+      );
+      final containerList = tester
+          .widgetList<Container>(cellContainers)
+          .toList();
+      expect(containerList.length, 82); // 1 outer + 81 cells.
+      final cellOnly = containerList.sublist(1);
+
+      // The selected cell is the one that should NOT be highlighted.
+      final selectedContainer = cellOnly[selectedIndex];
+      expect(
+        (selectedContainer.decoration! as BoxDecoration).color,
+        colorScheme.primaryContainer,
+        reason: 'selected cell uses primaryContainer tier',
+      );
+
+      // The non-selected peers in `expected` should all be highlighted
+      // — except for any that are fixed (givens). Filter the
+      // assertion to the empty peers: the test seeded blanks for
+      // exactly the cells in `expected` (give or take the few
+      // pre-existing givens at the intersection).
+      final highlighted = <int>{};
+      for (int i = 0; i < 81; i++) {
+        if (i == selectedIndex) continue;
+        final c = cellOnly[i];
+        final deco = c.decoration! as BoxDecoration;
+        if (deco.color == colorScheme.surfaceContainerLow) {
+          highlighted.add(i);
+        }
+      }
+
+      // The highlighted set should be a subset of `expected` (some
+      // expected cells may still be givens, so they take the
+      // surfaceContainerHighest tier and are excluded). What's
+      // guaranteed: every blank in `expected` is highlighted.
+      expect(
+        highlighted,
+        isNotEmpty,
+        reason: 'selecting a cell should produce a non-empty highlight set',
+      );
+      // Every blank peer must be highlighted.
+      for (final i in expected) {
+        if (blankIndexes.contains(i)) {
+          expect(
+            highlighted,
+            contains(i),
+            reason: 'blank peer cell $i should be highlighted',
+          );
+        }
+      }
+    },
+  );
+
+  testWidgets('selecting a different cell replaces the peer highlight', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Two empty cells far enough apart that their highlight sets do
+    // not overlap. Index 40 (row 4, col 4) and index 0 (row 0, col 0)
+    // — we blank both AND all their peers so the highlight tier is
+    // actually applied. Their peer sets are disjoint.
+    final seedModel = SudokuModel(
+      _puzzleWithBlanks(<int>{
+        // Peers of 0
+        0, 1, 2, 3, 4, 5, 6, 7, 8, // row 0
+        9, 18, 27, 45, 54, 63, 72, // col 0 minus row 0
+        10, 11, 19, 20, // box (0,0)-(2,2) extras
+        // Peers of 40
+        36, 37, 38, 39, 40, 41, 42, 43, 44, // row 4
+        13, 22, 31, 49, 58, 67, 76, // col 4 minus row 4
+        30, 32, 48, 50, // box (3,3)-(5,5) extras
+      }),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SudokuGameScreen(
+          difficulty: SudokuDifficulty.easy,
+          saveKey: 'sudoku_save_easy',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Helper: read the set of highlighted (non-selected) cell
+    // indexes from the rendered board.
+    final colorScheme = Theme.of(
+      tester.element(find.byType(SudokuGameScreen)),
+    ).colorScheme;
+    Set<int> highlighted({int? selectedIndex}) {
+      final cellContainers = find.descendant(
+        of: find.byType(SudokuBoard),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).color != null,
+        ),
+      );
+      final containerList = tester
+          .widgetList<Container>(cellContainers)
+          .toList();
+      if (containerList.length < 82) return const {};
+      final cellOnly = containerList.sublist(1);
+      final out = <int>{};
+      for (int i = 0; i < 81; i++) {
+        if (i == selectedIndex) continue;
+        final c = cellOnly[i];
+        final deco = c.decoration! as BoxDecoration;
+        if (deco.color == colorScheme.surfaceContainerLow) out.add(i);
+      }
+      return out;
+    }
+
+    // Initially no selection, no highlight.
+    expect(highlighted(), isEmpty);
+
+    // Select index 40 (Row 5 column 5, empty).
+    final cell40 = find.bySemanticsLabel(RegExp(r'Row 5 column 5, empty'));
+    await tester.tap(cell40.first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    final highlightFor40 = highlighted(selectedIndex: 40);
+    expect(highlightFor40, isNotEmpty);
+
+    // Select index 0 (Row 1 column 1, empty). The new highlight set
+    // should be the peers of index 0 — disjoint from the old set.
+    final cell00 = find.bySemanticsLabel(RegExp(r'Row 1 column 1, empty'));
+    await tester.tap(cell00.first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    final highlightFor0 = highlighted(selectedIndex: 0);
+
+    // The new highlight set must contain some peers of cell 0 that
+    // were not in the highlight set of cell 40 (e.g. 1, 2, 9, 10).
+    // These are the markers that the selection actually changed.
+    expect(
+      highlightFor0,
+      containsAll(<int>{1, 2, 9, 10}),
+      reason: 'highlight set for cell 0 should include row/col/box peers',
+    );
+    // The new set should NOT include the previously-selected cell 40
+    // (since cell 40 is empty, it can't match cell 0's value, and it
+    // is not in row 0, col 0, or box (0,0)-(2,2)).
+    expect(
+      highlightFor0,
+      isNot(contains(40)),
+      reason: 'previously-selected cell 40 should not be highlighted',
+    );
+  });
 }

@@ -227,6 +227,41 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     }
   }
 
+  /// Computes the set of cells to paint with the "peer" highlight given
+  /// the current selection. Returns the row, column, and 3×3 box members
+  /// (excluding the selected cell itself) union the set of cells whose
+  /// current value matches the selected cell's value.
+  ///
+  /// An empty set is returned when nothing is selected, so the board
+  /// reverts to its default background for all cells.
+  static Set<int> _computeHighlighted(SudokuModel model, int? selected) {
+    if (selected == null) return const <int>{};
+    final result = <int>{};
+    final selectedRow = selected ~/ 9;
+    final selectedCol = selected % 9;
+    final boxRowStart = (selectedRow ~/ 3) * 3;
+    final boxColStart = (selectedCol ~/ 3) * 3;
+    final selectedValue = model.values[selected];
+    for (int i = 0; i < SudokuPuzzle.cellCount; i++) {
+      if (i == selected) continue;
+      final r = i ~/ 9;
+      final c = i % 9;
+      final inRow = r == selectedRow;
+      final inCol = c == selectedCol;
+      final inBox =
+          r >= boxRowStart &&
+          r < boxRowStart + 3 &&
+          c >= boxColStart &&
+          c < boxColStart + 3;
+      final matchesDigit =
+          selectedValue != 0 && model.values[i] == selectedValue;
+      if (inRow || inCol || inBox || matchesDigit) {
+        result.add(i);
+      }
+    }
+    return result;
+  }
+
   void _onErase() {
     final model = _model;
     final index = _selectedIndex;
@@ -596,6 +631,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     final model = _model!;
     final canEdit = model.state is SudokuPlaying;
     final selected = _selectedIndex;
+    final highlighted = _computeHighlighted(model, selected);
     return LayoutBuilder(
       builder: (context, constraints) {
         const padHorizontal = 16.0;
@@ -644,6 +680,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
                 selectedIndex: selected,
                 notesMode: _notesMode,
                 invalidIndexes: _invalidIndexes,
+                highlightedIndexes: highlighted,
                 onCellSelected: _onCellSelected,
               ),
             ),

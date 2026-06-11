@@ -13,6 +13,7 @@ class SudokuBoard extends StatelessWidget {
     required this.notesMode,
     required this.onCellSelected,
     this.invalidIndexes = const <int>{},
+    this.highlightedIndexes = const <int>{},
   });
 
   final SudokuModel model;
@@ -20,6 +21,7 @@ class SudokuBoard extends StatelessWidget {
   final bool notesMode;
   final ValueChanged<int> onCellSelected;
   final Set<int> invalidIndexes;
+  final Set<int> highlightedIndexes;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +64,7 @@ class SudokuBoard extends StatelessWidget {
                   isFixed: model.puzzle.isGiven(index),
                   isSelected: index == selectedIndex,
                   isInvalid: invalidIndexes.contains(index),
+                  isHighlighted: highlightedIndexes.contains(index),
                   isComplete: model.state is SudokuCompleted,
                   notesMode: notesMode,
                   boxBorderRight: col == 2 || col == 5,
@@ -85,6 +88,7 @@ class _SudokuCell extends StatelessWidget {
     required this.isFixed,
     required this.isSelected,
     required this.isInvalid,
+    required this.isHighlighted,
     required this.isComplete,
     required this.notesMode,
     required this.boxBorderRight,
@@ -98,6 +102,7 @@ class _SudokuCell extends StatelessWidget {
   final bool isFixed;
   final bool isSelected;
   final bool isInvalid;
+  final bool isHighlighted;
   final bool isComplete;
   final bool notesMode;
   final bool boxBorderRight;
@@ -115,7 +120,7 @@ class _SudokuCell extends StatelessWidget {
         ? 'Row ${row + 1} column ${col + 1}, $value'
         : 'Row ${row + 1} column ${col + 1}, empty';
 
-    // Backgrounds: selected > invalid > fixed > selected-empty > normal
+    // Backgrounds: invalid > selected > fixed > highlighted > default
     Color background;
     if (isInvalid) {
       background = colorScheme.errorContainer;
@@ -123,6 +128,8 @@ class _SudokuCell extends StatelessWidget {
       background = colorScheme.primaryContainer;
     } else if (isFixed) {
       background = colorScheme.surfaceContainerHighest;
+    } else if (isHighlighted) {
+      background = colorScheme.surfaceContainerLow;
     } else {
       background = colorScheme.surface;
     }
