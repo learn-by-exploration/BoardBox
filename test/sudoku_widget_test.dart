@@ -9,6 +9,7 @@ import 'package:common_games/games/sudoku/sudoku_model.dart';
 import 'package:common_games/games/sudoku/sudoku_puzzle.dart';
 import 'package:common_games/screens/sudoku/sudoku_game_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
+import 'package:common_games/services/settings_service.dart';
 
 const _solution = [
   5,
@@ -362,4 +363,104 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'hitting the mistake limit shows the loss dialog and blocks further input',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Pre-set the limit to 1, mistake checking on, and seed a save with
+      // two blank cells so we can land on a wrong value and a correct
+      // follow-up.
+      await SettingsService.instance.setSudokuMistakeChecking(true);
+      await SettingsService.instance.setSudokuMistakesLimit(1);
+
+      final seedModel = SudokuModel(_puzzleWithBlanks([45, 46]));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SudokuGameScreen(
+            difficulty: SudokuDifficulty.easy,
+            saveKey: 'sudoku_save_easy',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the cell at (row 5, col 0) — index 45 — by its Semantics label
+      // and tap it. Using Semantics avoids coordinate math across surface
+      // sizes and works regardless of how the device pixel ratio scales
+      // the board.
+      final cellFinder = find.bySemanticsLabel(
+        RegExp(r'Row 6 column 1, empty'),
+      );
+      expect(cellFinder, findsOneWidget);
+      await tester.tap(cellFinder.first, warnIfMissed: false);
+      await tester.pump();
+      handle.dispose();
+
+      // Enter a wrong value (the solution at index 45 is 1, so 4 is wrong).
+      // Tapping the "4" number-pad button. We find it by its key.
+      await tester.tap(find.byKey(const ValueKey('sudoku_pad_4')));
+      await tester.pumpAndSettle();
+
+      // The loss dialog must appear.
+      expect(find.text('Too many mistakes'), findsOneWidget);
+
+      // The wrong value is on the board.
+      expect(find.text('4'), findsWidgets);
+    },
+  );
+
+  testWidgets('mistake checking off lets the user keep entering wrong values', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await SettingsService.instance.setSudokuMistakeChecking(false);
+    await SettingsService.instance.setSudokuMistakesLimit(1);
+
+    final seedModel = SudokuModel(_puzzleWithBlanks([0]));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('sudoku_save_easy', jsonEncode(seedModel.toJson()));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SudokuGameScreen(
+          difficulty: SudokuDifficulty.easy,
+          saveKey: 'sudoku_save_easy',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Tap the empty cell at (row 0, col 0) — index 0.
+    final boardFinder = find.byType(SudokuBoard);
+    final boardRect = tester.getRect(boardFinder);
+    final cell00 = Offset(
+      boardRect.left + boardRect.width / 18,
+      boardRect.top + boardRect.height / 18,
+    );
+    await tester.tapAt(cell00);
+    await tester.pump();
+
+    // Enter a wrong value (the solution at 0 is 5, so 4 is wrong).
+    await tester.tap(find.byKey(const ValueKey('sudoku_pad_4')));
+    await tester.pumpAndSettle();
+
+    // The loss dialog must NOT appear.
+    expect(find.text('Too many mistakes'), findsNothing);
+
+    // The wrong value is on the board.
+    expect(find.text('4'), findsWidgets);
+  });
 }

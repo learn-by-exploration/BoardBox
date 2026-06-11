@@ -12,11 +12,17 @@ class SettingsService extends ChangeNotifier {
   bool _fastAiMoves = false;
   bool _hapticsEnabled = true;
   ThemeMode _themeMode = ThemeMode.system;
+  bool _sudokuMistakeChecking = true;
+  int _sudokuMistakesLimit = 3;
 
   bool get showMoveHints => _showMoveHints;
   bool get fastAiMoves => _fastAiMoves;
   bool get hapticsEnabled => _hapticsEnabled;
   ThemeMode get themeMode => _themeMode;
+  bool get sudokuMistakeChecking => _sudokuMistakeChecking;
+
+  /// Max number of mistakes before the puzzle is locked. `0` means unlimited.
+  int get sudokuMistakesLimit => _sudokuMistakesLimit;
   Future<SharedPreferences> get preferences async =>
       _prefs ??= await SharedPreferences.getInstance();
 
@@ -25,6 +31,8 @@ class SettingsService extends ChangeNotifier {
     _showMoveHints = prefs.getBool('show_move_hints') ?? true;
     _fastAiMoves = prefs.getBool('fast_ai') ?? false;
     _hapticsEnabled = prefs.getBool('haptics_enabled') ?? true;
+    _sudokuMistakeChecking = prefs.getBool('sudoku_mistake_checking') ?? true;
+    _sudokuMistakesLimit = prefs.getInt('sudoku_mistakes_limit') ?? 3;
     final themeModeIndex = prefs.getInt('theme_mode') ?? ThemeMode.system.index;
     _themeMode =
         ThemeMode.values[themeModeIndex.clamp(0, ThemeMode.values.length - 1)];
@@ -51,6 +59,21 @@ class SettingsService extends ChangeNotifier {
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     await (await preferences).setInt('theme_mode', mode.index);
+    notifyListeners();
+  }
+
+  Future<void> setSudokuMistakeChecking(bool v) async {
+    _sudokuMistakeChecking = v;
+    await (await preferences).setBool('sudoku_mistake_checking', v);
+    notifyListeners();
+  }
+
+  Future<void> setSudokuMistakesLimit(int v) async {
+    _sudokuMistakesLimit = v < 0 ? 0 : v;
+    await (await preferences).setInt(
+      'sudoku_mistakes_limit',
+      _sudokuMistakesLimit,
+    );
     notifyListeners();
   }
 }

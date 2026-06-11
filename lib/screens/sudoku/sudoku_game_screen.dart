@@ -11,6 +11,7 @@ import 'package:common_games/games/sudoku/sudoku_isolate.dart';
 import 'package:common_games/games/sudoku/sudoku_model.dart';
 import 'package:common_games/games/sudoku/sudoku_puzzle.dart';
 import 'package:common_games/services/haptic_service.dart';
+import 'package:common_games/services/settings_service.dart';
 
 /// Full Sudoku play loop: load or generate a puzzle, render the board, route
 /// user actions through the model, and persist progress.
@@ -48,6 +49,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   Timer? _autosaveDebounce;
   Timer? _clockTimer;
   bool _gameOverShown = false;
+  bool _gameLostShown = false;
 
   @override
   void initState() {
@@ -105,6 +107,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
   void _restoreFromJson(String json) {
     final decoded = jsonDecode(json) as Map<String, dynamic>;
     final model = SudokuModel.fromJson(decoded);
+    _applySettingsTo(model);
     setState(() {
       _model = model;
       _generationError = null;
@@ -124,8 +127,10 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         () => generateSudokuPuzzleOnIsolate(widget.difficulty),
       );
       if (!mounted) return;
+      final model = SudokuModel(puzzle);
+      _applySettingsTo(model);
       setState(() {
-        _model = SudokuModel(puzzle);
+        _model = model;
         _generating = false;
       });
       _startClock();
@@ -137,6 +142,14 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         _generationError = e.toString();
       });
     }
+  }
+
+  /// Pushes the current settings-service values onto the freshly created
+  /// or restored model. Called by both the generate and restore paths.
+  void _applySettingsTo(SudokuModel model) {
+    final s = SettingsService.instance;
+    model.mistakeChecking = s.sudokuMistakeChecking;
+    model.mistakesLimit = s.sudokuMistakesLimit;
   }
 
   void _onCellSelected(int index) {
@@ -188,6 +201,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
       _scheduleAutosave();
     }
     _checkCompletion();
+    _checkLoss();
   }
 
   void _onErase() {
@@ -266,6 +280,8 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     _undoStack.clear();
     _generationError = null;
     _autosaveDebounce?.cancel();
+    _gameOverShown = false;
+    _gameLostShown = false;
     SharedPreferences.getInstance().then((prefs) async {
       await prefs.remove(widget.saveKey);
     });
@@ -286,6 +302,76 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
         _showCompletionDialog();
       });
     }
+  }
+
+  void _checkLoss() {
+    final model = _model;
+    if (model == null) return;
+    if (!model.isAtMistakeLimit || _gameLostShown) return;
+    // Only count as "lost" when the model is still playing — a completed
+    // puzzle that happens to have hit the limit isn't a loss.
+    if (model.state is! SudokuPlaying) return;
+    _gameLostShown = true;
+    HapticService.onGameOver();
+    _autosaveDebounce?.cancel();
+    _saveNow().then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(widget.saveKey);
+      if (!mounted) return;
+      _showLossDialog();
+    });
+  }
+
+  void _showLossDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final colorScheme = Theme.of(ctx).colorScheme;
+        final model = _model;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          icon: Icon(
+            Icons.sentiment_dissatisfied_outlined,
+            size: 48,
+            color: colorScheme.error,
+          ),
+          title: const Text(
+            'Too many mistakes',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            model == null
+                ? 'Better luck on the next one.'
+                : 'You hit the limit of '
+                      '${model.mistakesLimit} mistakes.\n'
+                      'Hints used: ${model.hintsUsed}',
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('Home'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _restart();
+              },
+              icon: const Icon(Icons.replay_rounded),
+              label: const Text('Try a new puzzle'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showCompletionDialog() {

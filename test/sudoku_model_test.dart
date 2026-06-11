@@ -318,6 +318,32 @@ void main() {
       expect(model.values[1], 0);
       expect(model.mistakes, 1);
     });
+
+    test('mistake checking off accepts wrong entries without counting', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]))
+        ..mistakeChecking = false;
+      // Wrong entry is accepted but no mistake recorded.
+      expect(model.enterValue(0, 4), isTrue);
+      expect(model.mistakes, 0);
+      expect(model.values[0], 4, reason: 'cell accepts the wrong value');
+      expect(model.isAtMistakeLimit, isFalse);
+      // A correct over-write also still works.
+      expect(model.enterValue(0, 5), isTrue);
+      expect(model.values[0], 5);
+      expect(model.mistakes, 0);
+    });
+
+    test('mistake checking off ignores the mistake limit entirely', () {
+      final model = SudokuModel(puzzleWithBlanks([0, 1]))
+        ..mistakesLimit = 1
+        ..mistakeChecking = false;
+      // With checking off, the limit is never reached.
+      expect(model.enterValue(0, 4), isTrue);
+      expect(model.isAtMistakeLimit, isFalse);
+      // The cell is editable even after a wrong entry.
+      expect(model.enterValue(1, 3), isTrue);
+      expect(model.values[1], 3);
+    });
   });
 
   test('factory generates a valid puzzle with one solution', () {

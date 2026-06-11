@@ -132,6 +132,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const Divider(),
+          const _SectionHeader(title: 'Sudoku'),
+          SwitchListTile(
+            title: const Text('Mistake checking'),
+            subtitle: const Text(
+              'Count wrong entries; the puzzle locks at the limit',
+            ),
+            value: _settings.sudokuMistakeChecking,
+            onChanged: _settings.setSudokuMistakeChecking,
+            secondary: Icon(
+              Icons.error_outline_rounded,
+              color: colorScheme.primary,
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.shield_outlined, color: colorScheme.primary),
+            title: const Text('Mistake limit'),
+            subtitle: Text(
+              _settings.sudokuMistakesLimit == 0
+                  ? 'Unlimited'
+                  : '${_settings.sudokuMistakesLimit} mistakes',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: const ValueKey('sudoku_limit_decrement'),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  tooltip: 'Decrease',
+                  onPressed: _settings.sudokuMistakesLimit <= 0
+                      ? null
+                      : () => _settings.setSudokuMistakesLimit(
+                          _settings.sudokuMistakesLimit - 1,
+                        ),
+                ),
+                SizedBox(
+                  width: 36,
+                  child: Text(
+                    _settings.sudokuMistakesLimit == 0
+                        ? '∞'
+                        : '${_settings.sudokuMistakesLimit}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('sudoku_limit_increment'),
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Increase',
+                  onPressed: _settings.sudokuMistakesLimit >= 9
+                      ? null
+                      : () => _settings.setSudokuMistakesLimit(
+                          _settings.sudokuMistakesLimit + 1,
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
           const _SectionHeader(title: 'Data'),
           ListTile(
             leading: Icon(

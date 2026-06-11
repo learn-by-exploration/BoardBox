@@ -40,6 +40,7 @@ class SudokuControls extends StatelessWidget {
         );
 
         Widget number(int n) => _PadButton(
+          key: ValueKey('sudoku_pad_$n'),
           width: cellSize,
           height: cellSize,
           onPressed: canEdit ? () => _fireHaptic(() => onNumber(n)) : null,
@@ -54,6 +55,7 @@ class SudokuControls extends StatelessWidget {
         );
 
         Widget eraseButton() => _PadButton(
+          key: const ValueKey('sudoku_pad_erase'),
           width: cellSize,
           height: cellSize,
           onPressed: canEdit ? () => _fireHaptic(onErase) : null,
@@ -65,6 +67,7 @@ class SudokuControls extends StatelessWidget {
         );
 
         Widget undoButton() => _PadButton(
+          key: const ValueKey('sudoku_pad_undo'),
           width: cellSize,
           height: cellSize,
           onPressed: canUndo ? () => _fireHaptic(onUndo) : null,
@@ -153,6 +156,7 @@ class SudokuControls extends StatelessWidget {
 
 class _PadButton extends StatelessWidget {
   const _PadButton({
+    super.key,
     required this.width,
     required this.height,
     required this.child,

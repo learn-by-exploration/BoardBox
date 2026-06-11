@@ -35,6 +35,11 @@ class SudokuModel {
   /// edits via [enterValue] returning `false` once the cap is hit.
   int mistakesLimit = 0;
 
+  /// When false, wrong entries are accepted silently — no mistake counter
+  /// increment, no game-over. The user can play in a relaxed mode.
+  /// Defaults to true.
+  bool mistakeChecking = true;
+
   UnmodifiableListView<int> get values => UnmodifiableListView(_values);
 
   List<UnmodifiableSetView<int>> get notes =>
@@ -67,7 +72,9 @@ class SudokuModel {
 
     _values[index] = value;
     _notes[index].clear();
-    if (value != 0 && value != puzzle.solution[index]) mistakes++;
+    if (value != 0 && value != puzzle.solution[index] && mistakeChecking) {
+      mistakes++;
+    }
 
     if (_values.indexed.every((cell) => cell.$2 == puzzle.solution[cell.$1])) {
       state = const SudokuCompleted();
