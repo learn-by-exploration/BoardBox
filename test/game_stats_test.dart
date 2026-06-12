@@ -21,5 +21,19 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getInt('karuro_wins'), 2);
     });
+
+    test(
+      'recordKlondikeWin increments and round-trips through prefs',
+      () async {
+        await GameStats.instance.init();
+        expect(GameStats.instance.getKlondikeWins(), 0);
+        await GameStats.instance.recordKlondikeWin();
+        expect(GameStats.instance.getKlondikeWins(), 1);
+
+        // Round-trip through SharedPreferences to verify the key/value path.
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getInt('klondike_wins'), 1);
+      },
+    );
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:common_games/screens/karuro/karuro_setup_screen.dart';
+import 'package:common_games/screens/klondike/klondike_setup_screen.dart';
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
@@ -18,7 +19,7 @@ class _GameInfo {
 
   /// Custom route key. When set, the game opens via its own setup
   /// screen rather than the shared [ModeSelectScreen] / Sudoku flow.
-  /// Currently: 'sudoku' and 'karuro'.
+  /// Currently: 'sudoku', 'karuro', 'klondike'.
   final String? customRoute;
 
   const _GameInfo({
@@ -36,6 +37,9 @@ class _GameInfo {
 
   /// Karuro has its own setup screen with bundled puzzles, like Sudoku.
   bool get isKaruro => customRoute == 'karuro';
+
+  /// Klondike has its own setup screen (always draw-1 in v1).
+  bool get isKlondike => customRoute == 'klondike';
 }
 
 const _games = [
@@ -105,6 +109,18 @@ const _games = [
         'Cross sums and word clues on the same grid. '
         'Hand-picked puzzles from easy to hard.',
   ),
+  _GameInfo(
+    title: 'Klondike',
+    subtitle: 'Solitaire',
+    icon: Icons.style_outlined,
+    color: Color(0xFF1B5E20),
+    // Klondike has its own setup screen (always draw-1 in v1).
+    gameType: null,
+    customRoute: 'klondike',
+    description:
+        'Build the four suit foundations from Ace to King. '
+        'Draw-1, unlimited redeals, with hint and auto-complete.',
+  ),
 ];
 
 class HomeScreen extends StatefulWidget {
@@ -162,6 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await Navigator.push<void>(
         context,
         MaterialPageRoute<void>(builder: (_) => const KaruroSetupScreen()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+    if (info.isKlondike) {
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const KlondikeSetupScreen()),
       );
       if (mounted) setState(() {});
       return;
@@ -384,6 +408,10 @@ class _GameRecord {
   static _GameRecord? read(_GameInfo info) {
     if (info.isKaruro) {
       final wins = GameStats.instance.getKaruroWins();
+      return _GameRecord(wins: wins, draws: 0, losses: 0);
+    }
+    if (info.isKlondike) {
+      final wins = GameStats.instance.getKlondikeWins();
       return _GameRecord(wins: wins, draws: 0, losses: 0);
     }
     final gameType = info.gameType;
