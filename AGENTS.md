@@ -4,7 +4,7 @@
 **Flutter:** 3.44.0 stable (CI-pinned) · **Dart:** `^3.12.0` · **JVM:** 17
 
 A Flutter app with local-multiplayer board games. Currently shipping: Gomoku,
-Othello, Checkers, Dots & Boxes, Tic Tac Toe, Sudoku, Karuro. New games follow
+Othello, Checkers, Dots & Boxes, Tic Tac Toe, Sudoku, Karuro, Klondike. New games follow
 the two-file pattern described in [§ Project structure](#project-structure).
 
 This file is the **portable baseline** for any coding agent (Claude Code, Codex,
@@ -51,7 +51,9 @@ lib/
   screens/                 # splash, home, mode_select, settings, privacy
     sudoku/                # sudoku_setup_screen + sudoku_game_screen
     karuro/                # karuro_setup_screen + karuro_game_screen
+    klondike/              # klondike_setup_screen + klondike_game_screen
   games/<name>/            # <name>_model.dart (pure Dart) + <name>_board.dart
+  games/cards/             # shared PlayingCard, Deck, CardView (Klondike v1 consumer)
   services/                # game_stats, settings_service, haptic_service
   widgets/                 # shared UI
   theme/                   # Material 3, seed 0xFF5C35CC
@@ -118,6 +120,7 @@ behavior. Failing these silently ships a broken game.
 | **Tic Tac Toe** | 3×3 and 4×4 win on 3-in-a-row; 5×5 wins on 4-in-a-row. X moves first. |
 | **Sudoku** | 9×9 grid; uses `fludoku: 4.0.5` for puzzle generation/validation; save format is versioned (`version: 2`); mistake limit and timer live on the model. |
 | **Karuro** | Hybrid Kakuro/crossword. Numeric runs: digits 1-9, no repeats within a run, sum equals the clue. Word runs: letters A-Z, spells the `answer` from `entries`. The per-cell `solution` map in the puzzle JSON is the source of truth for "show errors" — no runtime solver. |
+| **Klondike** | 7 tableau columns, 4 foundations, 24-card stock, draw-1 only. Standard Klondike turn-1 deal: after `deal()`, every column has exactly one face-up card at the top (column 1 included). Win = all four foundations built to King by suit. Hint, auto-complete, undo, timer, and move counter are part of the model layer (not screen-side). |
 
 ---
 
