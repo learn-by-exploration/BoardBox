@@ -140,6 +140,21 @@ class KlondikeModel {
 
   final List<_Snapshot> _history;
 
+  /// Number of user-driven moves made so far. Each mutation that pushes
+  /// onto the history stack increments this; `undo()` decrements it.
+  /// Surfaced in the game screen's status bar.
+  int get moves => _history.length;
+
+  /// True if at least one history snapshot exists, i.e. `undo()` will
+  /// do something. Used by the screen to enable / disable the Undo
+  /// button.
+  bool get canUndo => _history.isNotEmpty;
+
+  /// Seconds elapsed since the deal. Owned by the screen, not the
+  /// model — the screen drives the timer and reads it for the status
+  /// bar. Stored on the model only so it can survive save / restore.
+  int elapsedSeconds = 0;
+
   /// Test-only helper: push [card] onto foundation [foundationIndex].
   /// Used by `klondike_model_test.dart` to construct near-won states
   /// without going through dozens of legal moves. Not part of the public
@@ -334,6 +349,7 @@ class KlondikeModel {
   Map<String, dynamic> toJson() => {
     'version': 1,
     'seed': _seed,
+    'elapsedSeconds': elapsedSeconds,
     'tableau': [
       for (final col in tableau)
         [
@@ -359,6 +375,7 @@ class KlondikeModel {
       throw const FormatException('Unsupported Klondike save version');
     }
     final seed = json['seed'] as int?;
+    final elapsed = json['elapsedSeconds'] as int? ?? 0;
     final tableauJson = json['tableau'] as List;
     if (tableauJson.length != 7) {
       throw const FormatException(
@@ -402,13 +419,16 @@ class KlondikeModel {
         ? const KlondikeWon()
         : const KlondikePlaying();
 
-    final model = KlondikeModel(
-      tableau: tableau,
-      stock: stock,
-      waste: waste,
-      foundations: foundations,
-      seed: seed,
-    )..state = state;
+    final model =
+        KlondikeModel(
+            tableau: tableau,
+            stock: stock,
+            waste: waste,
+            foundations: foundations,
+            seed: seed,
+          )
+          ..state = state
+          ..elapsedSeconds = elapsed;
     return model;
   }
 

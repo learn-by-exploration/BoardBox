@@ -82,4 +82,17 @@ class GameStats {
   Future<void> recordKaruroWin() async {
     await _prefs?.setInt(_karuroWinsKey, getKaruroWins() + 1);
   }
+
+  // ─── Klondike (single-player card game) ──────────────────────────────
+  // Klondike has no AI opponent and no per-difficulty breakdown in v1, so
+  // it mirrors the Karuro pattern: a single win counter surfaced on the
+  // home tile.
+
+  static const String _klondikeWinsKey = 'klondike_wins';
+
+  int getKlondikeWins() => _prefs?.getInt(_klondikeWinsKey) ?? 0;
+
+  Future<void> recordKlondikeWin() async {
+    await _prefs?.setInt(_klondikeWinsKey, getKlondikeWins() + 1);
+  }
 }

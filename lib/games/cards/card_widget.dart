@@ -58,26 +58,38 @@ class CardView extends StatelessWidget {
               ? _BackPattern(color: colorScheme.onPrimaryContainer)
               : Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _Corner(rank: card.rank, suit: card.suit, fg: fg),
-                      Center(
-                        child: _SuitGlyph(suit: card.suit, fg: fg),
-                      ),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: RotatedBox(
-                          quarterTurns: 2,
-                          child: _Corner(
-                            rank: card.rank,
-                            suit: card.suit,
-                            fg: fg,
+                  // `FittedBox` keeps the rank/suit layout proportional
+                  // when the card is rendered at small sizes (e.g. on a
+                  // narrow phone where a column is ~38×62). The natural
+                  // intrinsic size of the content is ~90 tall; on
+                  // shorter cards we shrink the suit glyph rather than
+                  // overflow.
+                  child: FittedBox(
+                    child: SizedBox(
+                      width: 60,
+                      height: 90,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _Corner(rank: card.rank, suit: card.suit, fg: fg),
+                          Center(
+                            child: _SuitGlyph(suit: card.suit, fg: fg),
                           ),
-                        ),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: RotatedBox(
+                              quarterTurns: 2,
+                              child: _Corner(
+                                rank: card.rank,
+                                suit: card.suit,
+                                fg: fg,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
         ),
