@@ -103,6 +103,89 @@ void main() {
         const PlayingCard(suit: Suit.hearts, rank: Rank.king),
       );
     });
+
+    testWidgets(
+      'exposes Semantics labels for cards, stock, waste, and foundations',
+      (tester) async {
+        // Set up a deterministic state: face-up King of hearts on column
+        // 0 top, empty stock, and 1 card on the clubs foundation.
+        final model = KlondikeModel(
+          tableau: [
+            Pile(
+              cards: [
+                const PileCard(
+                  card: PlayingCard(suit: Suit.hearts, rank: Rank.king),
+                  faceUp: true,
+                ),
+              ],
+            ),
+            Pile.empty(),
+            Pile.empty(),
+            Pile.empty(),
+            Pile.empty(),
+            Pile.empty(),
+            Pile.empty(),
+          ],
+          stock: const [],
+          waste: const [],
+          foundations: List.generate(4, (_) => Pile.empty()),
+        );
+        model.debugPushForTest(
+          0,
+          const PlayingCard(suit: Suit.clubs, rank: Rank.ace),
+        );
+
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 800,
+                height: 600,
+                child: KlondikeBoard(model: model),
+              ),
+            ),
+          ),
+        );
+
+        // The face-up King of hearts has the spoken-form "king of hearts"
+        // label, and the stock pile has its count-style label.
+        expect(find.bySemanticsLabel('king of hearts'), findsOneWidget);
+        expect(find.bySemanticsLabel('Stock, 0 cards'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('Foundation clubs, 1 cards'),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Waste, empty'), findsOneWidget);
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets('stock tap target meets the 48dp touch-target minimum', (
+      tester,
+    ) async {
+      final model = KlondikeModel.deal(seed: 1);
+      // 414dp wide is the smallest phone width we target; the 7-column
+      // tableau needs 7*48 + 6*4 = 360dp to fit, and the 8dp board
+      // padding + top strip / status bar eat the rest.
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 414,
+              height: 640,
+              child: KlondikeBoard(model: model),
+            ),
+          ),
+        ),
+      );
+      final stockSize = tester.getSize(
+        find.bySemanticsLabel('Stock, ${model.stock.length} cards'),
+      );
+      expect(stockSize.width, greaterThanOrEqualTo(48.0));
+      expect(stockSize.height, greaterThanOrEqualTo(48.0));
+    });
   });
 
   group('KlondikeGameScreen', () {

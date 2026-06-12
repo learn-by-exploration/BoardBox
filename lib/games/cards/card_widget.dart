@@ -45,53 +45,70 @@ class CardView extends StatelessWidget {
     return SizedBox(
       width: w,
       height: h,
-      child: Material(
-        elevation: highlighted ? 6 : 1,
-        color: faceDown ? colorScheme.primaryContainer : bg,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          decoration: BoxDecoration(
+      child: Semantics(
+        container: true,
+        // Face-up cards get a rank+suit label. Face-down cards keep the
+        // generic "Card back" label so screen readers don't read the
+        // placeholder rank/suit on the back pattern. The board's stock /
+        // waste / foundation wrappers supply the count-style label
+        // ("Stock, 24 cards") that this card sits inside.
+        label: faceDown ? 'Card back' : _cardLabel(card),
+        button: !faceDown,
+        // Wrap the inner content in a `Semantics(excludeSemantics: true)`
+        // so the rank/suit Text widgets are hidden — otherwise the
+        // screen reader would announce both the parent label and the
+        // individual "K", "♥" labels.
+        child: Semantics(
+          excludeSemantics: true,
+          child: Material(
+            elevation: highlighted ? 6 : 1,
+            color: faceDown ? colorScheme.primaryContainer : bg,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: border, width: highlighted ? 2 : 1),
-          ),
-          child: faceDown
-              ? _BackPattern(color: colorScheme.onPrimaryContainer)
-              : Padding(
-                  padding: const EdgeInsets.all(4),
-                  // `FittedBox` keeps the rank/suit layout proportional
-                  // when the card is rendered at small sizes (e.g. on a
-                  // narrow phone where a column is ~38×62). The natural
-                  // intrinsic size of the content is ~90 tall; on
-                  // shorter cards we shrink the suit glyph rather than
-                  // overflow.
-                  child: FittedBox(
-                    child: SizedBox(
-                      width: 60,
-                      height: 90,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _Corner(rank: card.rank, suit: card.suit, fg: fg),
-                          Center(
-                            child: _SuitGlyph(suit: card.suit, fg: fg),
-                          ),
-                          Align(
-                            alignment: Alignment.bottomRight,
-                            child: RotatedBox(
-                              quarterTurns: 2,
-                              child: _Corner(
-                                rank: card.rank,
-                                suit: card.suit,
-                                fg: fg,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: border, width: highlighted ? 2 : 1),
+              ),
+              child: faceDown
+                  ? _BackPattern(color: colorScheme.onPrimaryContainer)
+                  : Padding(
+                      padding: const EdgeInsets.all(4),
+                      // `FittedBox` keeps the rank/suit layout proportional
+                      // when the card is rendered at small sizes (e.g. on a
+                      // narrow phone where a column is ~38×62). The natural
+                      // intrinsic size of the content is ~90 tall; on
+                      // shorter cards we shrink the suit glyph rather than
+                      // overflow.
+                      child: FittedBox(
+                        child: SizedBox(
+                          width: 60,
+                          height: 90,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _Corner(rank: card.rank, suit: card.suit, fg: fg),
+                              Center(
+                                child: _SuitGlyph(suit: card.suit, fg: fg),
                               ),
-                            ),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: RotatedBox(
+                                  quarterTurns: 2,
+                                  child: _Corner(
+                                    rank: card.rank,
+                                    suit: card.suit,
+                                    fg: fg,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+            ),
+          ),
         ),
       ),
     );
@@ -194,3 +211,27 @@ String _suitChar(Suit s) {
     Suit.spades => '♠',
   };
 }
+
+String _suitName(Suit s) {
+  return switch (s) {
+    Suit.clubs => 'clubs',
+    Suit.diamonds => 'diamonds',
+    Suit.hearts => 'hearts',
+    Suit.spades => 'spades',
+  };
+}
+
+String _rankName(Rank r) {
+  return switch (r) {
+    Rank.ace => 'ace',
+    Rank.jack => 'jack',
+    Rank.queen => 'queen',
+    Rank.king => 'king',
+    _ => '${r.index + 1}',
+  };
+}
+
+/// Spoken-form label for a face-up card, e.g. "5 of hearts". Used by
+/// `Semantics` so screen readers announce the card's identity.
+String _cardLabel(PlayingCard c) =>
+    '${_rankName(c.rank)} of ${_suitName(c.suit)}';

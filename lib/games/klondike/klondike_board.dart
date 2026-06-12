@@ -140,30 +140,35 @@ class _FoundationSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return AspectRatio(
-      aspectRatio: 2 / 3,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
-        child: pile.isEmpty
-            ? Center(
-                child: Text(
-                  _suitChar(suit),
-                  style: TextStyle(
-                    color: colorScheme.outline,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+    return Semantics(
+      container: true,
+      label: 'Foundation ${_suitName(suit)}, ${pile.length} cards',
+      excludeSemantics: true,
+      child: AspectRatio(
+        aspectRatio: 2 / 3,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: pile.isEmpty
+              ? Center(
+                  child: Text(
+                    _suitChar(suit),
+                    style: TextStyle(
+                      color: colorScheme.outline,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: CardView(card: pile.top.card),
                 ),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(2),
-                child: CardView(card: pile.top.card),
-              ),
+        ),
       ),
     );
   }
@@ -254,9 +259,12 @@ class _TableauRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Card width = (constraint - gaps) / 7. Min 36 so labels stay legible.
+        // Card width = (constraint - gaps) / 7. Clamped to 48dp so each
+        // tappable card meets the 48dp touch-target requirement. The
+        // height is width × 1.5 (card aspect 2/3), so width ≥ 48 gives
+        // a height ≥ 72 — comfortably above the threshold.
         final cardWidth = ((constraints.maxWidth - 6 * 4) / 7).clamp(
-          36.0,
+          48.0,
           80.0,
         );
         return Row(
