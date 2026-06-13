@@ -258,14 +258,6 @@ void main() {
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      // Save a state where (0, 0) is a revealed mine already (manually
-      // constructed save). We use the model's known mine in a placed
-      // minefield by writing a minesPlaced state that includes a mine
-      // at (0, 0). Since hand-rolling a save that matches the seed's
-      // minefield is fragile, we instead test the simpler invariant:
-      // the model is in playing state at first render and a tap on a
-      // cell that is known to be a mine in a placed minefield flips
-      // to Lost.
       final model = MinesweeperModel.deal(
         difficulty: MinesweeperDifficulty.beginner,
         seed: 1,
@@ -281,10 +273,7 @@ void main() {
           }
         }
       }
-      // Build a save with the placed minefield and the timer at 0.
       final json = model.toJson();
-      // Re-deal fresh and reuse the same json so the screen restores
-      // the exact minefield the test wants.
       SharedPreferences.setMockInitialValues({
         MinesweeperGameScreen.saveKeyFor(MinesweeperDifficulty.beginner):
             jsonEncode(json),
@@ -297,13 +286,80 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // Tap the known mine. Its index in the grid is r * cols + c.
       final mineIndex = mineAt.$1 * model.cols + mineAt.$2;
       final cellFinder = find.byType(GestureDetector).at(mineIndex);
       await tester.tap(cellFinder);
       await tester.pumpAndSettle();
-      // The loss dialog opens.
       expect(find.text('Boom!'), findsOneWidget);
+    });
+
+    testWidgets('cells expose Semantics labels for screen readers', (
+      tester,
+    ) async {
+      final model = MinesweeperModel.deal(
+        difficulty: MinesweeperDifficulty.beginner,
+        seed: 1,
+      );
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 800,
+              height: 600,
+              child: MinesweeperBoard(model: model),
+            ),
+          ),
+        ),
+      );
+      // Before any tap, every cell reads as "Hidden".
+      expect(find.bySemanticsLabel('Hidden'), findsNWidgets(81));
+      // Tap the first cell to place the minefield and cascade-reveal
+      // connected cells. The tapped cell is now "Revealed, …" and the
+      // rest that the cascade touched are too. The remaining hidden
+      // cells are still "Hidden".
+      await tester.tap(find.byType(GestureDetector).first);
+      await tester.pumpAndSettle();
+      // Some hidden cells remain (we don't know the exact cascade
+      // extent without re-implementing the model's logic) but the
+      // count must be strictly less than the 81 we started with.
+      final hiddenAfter = find.bySemanticsLabel('Hidden').evaluate().length;
+      expect(hiddenAfter, lessThan(81));
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Revealed, .* adjacent mines$')),
+        findsAtLeast(1),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('mine counter and timer pills have spoken-form labels', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(414 * 3, 896 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MinesweeperGameScreen(
+            difficulty: MinesweeperDifficulty.beginner,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Mine counter says "Mines remaining: 10" (Beginner, no flags).
+      expect(find.bySemanticsLabel('Mines remaining: 10'), findsOneWidget);
+      // Timer reads "Time: 00:00".
+      expect(find.bySemanticsLabel('Time: 00:00'), findsOneWidget);
+      // The reset (face-icon) button is at least 48dp tall — Material
+      // IconButton guarantees this.
+      final resetSize = tester.getSize(
+        find.byKey(const ValueKey('minesweeper_reset')),
+      );
+      expect(resetSize.width, greaterThanOrEqualTo(48.0));
+      expect(resetSize.height, greaterThanOrEqualTo(48.0));
+      handle.dispose();
     });
   });
 

@@ -236,17 +236,68 @@ class _Cell extends StatelessWidget {
       width: revealed(cell, model) ? 0.5 : 1,
     );
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        decoration: BoxDecoration(color: background, border: border),
-        alignment: Alignment.center,
-        child: child,
+    final semanticsLabel = _cellSemanticsLabel(
+      row: row,
+      col: col,
+      cell: cell,
+      model: model,
+      isLost: isLost,
+      isWon: isWon,
+    );
+    return Semantics(
+      label: semanticsLabel,
+      // Hidden and flagged cells are tappable; revealed cells are
+      // no-op for taps but we still announce them so a screen reader
+      // user can hear the count.
+      button: !cell.revealed && !isLost && !isWon,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(color: background, border: border),
+          alignment: Alignment.center,
+          child: child,
+        ),
       ),
     );
   }
+}
+
+String _cellSemanticsLabel({
+  required int row,
+  required int col,
+  required MinesweeperCell cell,
+  required MinesweeperModel model,
+  required bool isLost,
+  required bool isWon,
+}) {
+  if (isLost) {
+    if (cell.isMine && cell.revealed) return 'Mine exploded';
+    if (cell.isMine) return 'Mine, hidden';
+    if (cell.revealed) {
+      final n = model.adjacentMinesAt(row, col);
+      return n == 0
+          ? 'Revealed, no adjacent mines'
+          : 'Revealed, $n adjacent mines';
+    }
+    if (cell.flagged) return 'Flagged, but not a mine';
+    return 'Hidden, no mine';
+  }
+  if (isWon) {
+    if (cell.isMine) return 'Mine, correctly flagged';
+    return 'Revealed, safe';
+  }
+  // Playing state.
+  if (cell.revealed) {
+    final n = model.adjacentMinesAt(row, col);
+    return n == 0
+        ? 'Revealed, no adjacent mines'
+        : 'Revealed, $n adjacent mines';
+  }
+  if (cell.flagged) return 'Flagged';
+  return 'Hidden';
 }
 
 bool revealed(MinesweeperCell cell, MinesweeperModel model) {

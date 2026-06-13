@@ -222,6 +222,8 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen> {
             tooltip: 'Reset board',
             icon: Icon(_faceIcon()),
             onPressed: model == null ? null : _onReset,
+            // Material IconButton defaults to 48dp; this label lets
+            // the screen reader announce the action verb explicitly.
           ),
         ],
       ),
@@ -266,6 +268,7 @@ class _StatusBar extends StatelessWidget {
             key: const ValueKey('minesweeper_mine_counter'),
             icon: Icons.warning_amber_rounded,
             label: '$remaining',
+            semanticsLabel: 'Mines remaining: $remaining',
             color: colorScheme.error,
           ),
           const Spacer(),
@@ -273,6 +276,7 @@ class _StatusBar extends StatelessWidget {
             key: const ValueKey('minesweeper_timer'),
             icon: Icons.timer_outlined,
             label: _formatTime(model.elapsedSeconds),
+            semanticsLabel: 'Time: ${_formatTime(model.elapsedSeconds)}',
             color: colorScheme.primary,
           ),
         ],
@@ -287,33 +291,44 @@ class _Pill extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.semanticsLabel,
   });
 
   final IconData icon;
   final String label;
   final Color color;
 
+  /// Spoken-form label. When set, the pill is wrapped in a
+  /// [Semantics] widget that announces this string instead of
+  /// reading the inner `Text` + `Icon` separately.
+  final String? semanticsLabel;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
+    return Semantics(
+      container: true,
+      label: semanticsLabel ?? label,
+      excludeSemantics: semanticsLabel != null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
