@@ -84,6 +84,13 @@ void main() {
     await GameStats.instance.init();
 
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    // Let the async stat reads in _RecordSummary and the tile FutureBuilders
+    // resolve. SharedPreferences.getInstance() returns a real Future, so we
+    // step out of the fake-async zone to let it complete.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await tester.pump();
 
     expect(find.text('6 single-player matches completed'), findsOneWidget);
     expect(find.text('2 W  ·  0 D  ·  1 L'), findsOneWidget);
@@ -194,20 +201,33 @@ void main() {
   testWidgets('Minesweeper tile shows per-difficulty record after a win', (
     tester,
   ) async {
-    await GameStats.instance.recordMinesweeperWin(
-      MinesweeperDifficulty.beginner,
-    );
-    await GameStats.instance.recordMinesweeperWin(
-      MinesweeperDifficulty.beginner,
-    );
-    await GameStats.instance.recordMinesweeperLoss(
-      MinesweeperDifficulty.expert,
-    );
+    // Step out of the fake-async zone so the recordMinesweeper* futures
+    // can complete (SharedPreferences.setInt resolves on a real Future
+    // that the fake-async clock doesn't drive).
+    await tester.runAsync(() async {
+      await GameStats.instance.recordMinesweeperWin(
+        MinesweeperDifficulty.beginner,
+      );
+      await GameStats.instance.recordMinesweeperWin(
+        MinesweeperDifficulty.beginner,
+      );
+      await GameStats.instance.recordMinesweeperLoss(
+        MinesweeperDifficulty.expert,
+      );
+    });
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    // Let the async stat reads in _RecordSummary and the tile FutureBuilders
+    // resolve. SharedPreferences.getInstance() returns a real Future, so we
+    // step out of the fake-async zone to let it complete.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await tester.pump();
 
     // Scroll down to bring the Minesweeper tile into view.
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Beginner 2W/0L and Expert 0W/1L — Intermediate is empty and
     // dropped from the summary.

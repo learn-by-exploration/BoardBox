@@ -24,7 +24,7 @@ class MinesweeperSetupScreen extends StatelessWidget {
               const SizedBox(height: 12),
             ],
             const SizedBox(height: 8),
-            const _StatsCard(),
+            const _StatsCard(key: _StatsCard.widgetKey),
           ],
         ),
       ),
@@ -115,17 +115,81 @@ class _DifficultyCard extends StatelessWidget {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard();
+class _StatsCard extends StatefulWidget {
+  const _StatsCard({super.key});
+
+  @override
+  State<_StatsCard> createState() => _StatsCardState();
+
+  /// Pre-built key for tests to find the widget instance. Tests
+  /// use `find.byKey(StatsCardAccess.widgetKey)` to look up the
+  /// [State] of the rendered card.
+  @visibleForTesting
+  static const Key widgetKey = ValueKey('minesweeper_stats_card');
+}
+
+/// Public type alias of the private [_StatsCard] widget for tests. The
+/// alias preserves the binding to [_StatsCard.cardKey] without making
+/// the implementation class part of the public API.
+@visibleForTesting
+typedef StatsCardAccess = _StatsCard;
+
+/// Public type alias of the private [_StatsCardState] for tests. The
+/// alias preserves the name binding without leaking the implementation
+/// class — anything outside this file that does
+/// `tester.state<StatsCardStateAccess>(...)` is using the alias.
+@visibleForTesting
+typedef StatsCardStateAccess = _StatsCardState;
+
+class _StatsCardState extends State<_StatsCard> {
+  /// Two parallel maps keyed by [MinesweeperDifficulty]. `null` means
+  /// "not yet read from SharedPreferences"; the card paints a placeholder
+  /// while the read is in-flight so the first frame doesn't claim "0W/0L"
+  /// for a difficulty the user has actually played.
+  final Map<MinesweeperDifficulty, int> _wins = {};
+  final Map<MinesweeperDifficulty, int> _losses = {};
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  /// Returns a [Future] that completes once the SharedPreferences read
+  /// initiated in [initState] has settled (and the state has been
+  /// rebuilt with the result). Tests step into [runAsync] and await
+  /// this so the assertion below sees the post-load widget tree.
+  @visibleForTesting
+  Future<void> loadFuture() => _loadStats();
+
+  Future<void> _loadStats() async {
+    final stats = GameStats.instance;
+    final w = <MinesweeperDifficulty, int>{};
+    final l = <MinesweeperDifficulty, int>{};
+    for (final d in MinesweeperDifficulty.values) {
+      w[d] = await stats.getMinesweeperWins(d);
+      l[d] = await stats.getMinesweeperLosses(d);
+    }
+    if (!mounted) return;
+    setState(() {
+      _wins
+        ..clear()
+        ..addAll(w);
+      _losses
+        ..clear()
+        ..addAll(l);
+      _loaded = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final stats = GameStats.instance;
     final parts = <String>[];
     for (final d in MinesweeperDifficulty.values) {
-      final wins = stats.getMinesweeperWins(d);
-      final losses = stats.getMinesweeperLosses(d);
+      final wins = _wins[d] ?? 0;
+      final losses = _losses[d] ?? 0;
       if (wins == 0 && losses == 0) {
         parts.add('${d.label} –');
       } else {
@@ -149,7 +213,14 @@ class _StatsCard extends StatelessWidget {
             Icon(Icons.emoji_events_outlined, color: colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(body, style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                body,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: _loaded
+                      ? null
+                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+              ),
             ),
           ],
         ),

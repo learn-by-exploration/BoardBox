@@ -7,13 +7,35 @@ import 'package:common_games/services/game_stats.dart';
 /// the setup screen is a single hero card with a "New game" button. The
 /// screen doubles as the home for the win counter so the user can see
 /// their progress from the catalog.
-class KlondikeSetupScreen extends StatelessWidget {
+class KlondikeSetupScreen extends StatefulWidget {
   const KlondikeSetupScreen({super.key});
+
+  @override
+  State<KlondikeSetupScreen> createState() => _KlondikeSetupScreenState();
+}
+
+class _KlondikeSetupScreenState extends State<KlondikeSetupScreen> {
+  int _wins = 0;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWins();
+  }
+
+  Future<void> _loadWins() async {
+    final w = await GameStats.instance.getKlondikeWins();
+    if (!mounted) return;
+    setState(() {
+      _wins = w;
+      _loaded = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final wins = GameStats.instance.getKlondikeWins();
     return Scaffold(
       appBar: AppBar(title: const Text('Klondike')),
       body: SafeArea(
@@ -93,7 +115,10 @@ class KlondikeSetupScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              _WinsCard(wins: wins),
+              // Show a placeholder while the read is in-flight so the first
+              // frame doesn't paint the wrong total. The real value lands
+              // on the same frame as the splash fades; see GameStats.ready.
+              _WinsCard(wins: _loaded ? _wins : 0, dimmed: !_loaded),
             ],
           ),
         ),
@@ -103,9 +128,10 @@ class KlondikeSetupScreen extends StatelessWidget {
 }
 
 class _WinsCard extends StatelessWidget {
-  const _WinsCard({required this.wins});
+  const _WinsCard({required this.wins, this.dimmed = false});
 
   final int wins;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +162,11 @@ class _WinsCard extends StatelessWidget {
                     wins == 0
                         ? 'No wins yet — flip your first card.'
                         : '$wins ${wins == 1 ? "win" : "wins"}',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: dimmed
+                          ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                          : null,
+                    ),
                   ),
                 ],
               ),

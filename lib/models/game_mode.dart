@@ -25,3 +25,9 @@ enum AiDifficulty {
     AiDifficulty.hard => 'Advanced tactics — very tough',
   };
 }
+
+/// The 5 single-player / two-player board games that share a win/loss
+/// record. Single-player games without an AI opponent (Karuro,
+/// Klondike, Minesweeper) live outside this enum and have their own
+/// per-key counters on [GameStats].
+enum GameType { gomoku, othello, checkers, dotsAndBoxes, tictactoe }

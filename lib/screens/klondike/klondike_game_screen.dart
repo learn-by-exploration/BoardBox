@@ -194,7 +194,7 @@ class _KlondikeGameScreenState extends State<KlondikeGameScreen>
     if (model.state is KlondikeWon && !_wonShown) {
       _wonShown = true;
       HapticService.onGameOver();
-      GameStats.instance.recordKlondikeWin();
+      unawaited(GameStats.instance.recordKlondikeWin());
       unawaited(_clearSave());
       _stopAutoComplete();
       _clockTimer?.cancel();

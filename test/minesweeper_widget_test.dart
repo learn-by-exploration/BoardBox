@@ -432,15 +432,29 @@ void main() {
     });
 
     testWidgets('shows the per-difficulty record after a win', (tester) async {
-      await GameStats.instance.recordMinesweeperWin(
-        MinesweeperDifficulty.beginner,
-      );
-      await GameStats.instance.recordMinesweeperLoss(
-        MinesweeperDifficulty.intermediate,
-      );
+      // Step out of the fake-async zone so the recordMinesweeper* futures
+      // can complete (SharedPreferences.setInt resolves on a real Future
+      // that the fake-async clock doesn't drive).
+      await tester.runAsync(() async {
+        await GameStats.instance.recordMinesweeperWin(
+          MinesweeperDifficulty.beginner,
+        );
+        await GameStats.instance.recordMinesweeperLoss(
+          MinesweeperDifficulty.intermediate,
+        );
+      });
       await tester.pumpWidget(
         const MaterialApp(home: MinesweeperSetupScreen()),
       );
+      // _StatsCard reads stats asynchronously in initState. Wait for its
+      // loader future to settle, then pump the resulting setState frame.
+      await tester.runAsync(() async {
+        final state = tester.state<StatsCardStateAccess>(
+          find.byKey(StatsCardAccess.widgetKey),
+        );
+        await state.loadFuture();
+      });
+      await tester.pump();
       // The summary line mentions the beginner and intermediate counts.
       expect(find.textContaining('Beginner 1W/0L'), findsOneWidget);
       expect(find.textContaining('Intermediate 0W/1L'), findsOneWidget);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:common_games/models/game_mode.dart';
 import 'package:common_games/screens/game_screen.dart';
-import 'package:common_games/screens/home_screen.dart';
 
 const _rules = <GameType, _RulesData>{
   GameType.gomoku: _RulesData(

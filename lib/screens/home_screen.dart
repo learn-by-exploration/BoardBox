@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:common_games/games/minesweeper/minesweeper_model.dart';
+import 'package:common_games/models/game_mode.dart';
 import 'package:common_games/screens/karuro/karuro_setup_screen.dart';
 import 'package:common_games/screens/klondike/klondike_setup_screen.dart';
 import 'package:common_games/screens/minesweeper/minesweeper_setup_screen.dart';
@@ -8,8 +9,6 @@ import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
 import 'package:common_games/services/game_stats.dart';
-
-enum GameType { gomoku, othello, checkers, dotsAndBoxes, tictactoe }
 
 class _GameInfo {
   final String title;
@@ -431,13 +430,13 @@ class _GameRecord {
   String get label =>
       played == 0 ? 'No matches yet' : '$wins W  ·  $draws D  ·  $losses L';
 
-  static _GameRecord? read(_GameInfo info) {
+  static Future<_GameRecord?> read(_GameInfo info) async {
     if (info.isKaruro) {
-      final wins = GameStats.instance.getKaruroWins();
+      final wins = await GameStats.instance.getKaruroWins();
       return _GameRecord(wins: wins, draws: 0, losses: 0);
     }
     if (info.isKlondike) {
-      final wins = GameStats.instance.getKlondikeWins();
+      final wins = await GameStats.instance.getKlondikeWins();
       return _GameRecord(wins: wins, draws: 0, losses: 0);
     }
     if (info.isMinesweeper) {
@@ -451,8 +450,8 @@ class _GameRecord {
       var wins = 0;
       var losses = 0;
       for (final d in MinesweeperDifficulty.values) {
-        wins += stats.getMinesweeperWins(d);
-        losses += stats.getMinesweeperLosses(d);
+        wins += await stats.getMinesweeperWins(d);
+        losses += await stats.getMinesweeperLosses(d);
       }
       return _GameRecord(wins: wins, draws: 0, losses: losses);
     }
@@ -460,9 +459,9 @@ class _GameRecord {
     if (gameType == null) return null;
     final stats = GameStats.instance;
     return _GameRecord(
-      wins: stats.getTotalWins(gameType),
-      draws: stats.getTotalDraws(gameType),
-      losses: stats.getTotalLosses(gameType),
+      wins: await stats.getTotalWins(gameType),
+      draws: await stats.getTotalDraws(gameType),
+      losses: await stats.getTotalLosses(gameType),
     );
   }
 }
@@ -473,13 +472,13 @@ class _GameRecord {
 /// `'New game — pick a difficulty'`. This lives next to [_GameRecord]
 /// because Minesweeper's stat shape doesn't fit the
 /// (wins, draws, losses) tuple the other games use.
-String minesweeperRecordLabel() {
+Future<String> minesweeperRecordLabel() async {
   final stats = GameStats.instance;
   final parts = <String>[];
   var hasAny = false;
   for (final d in MinesweeperDifficulty.values) {
-    final wins = stats.getMinesweeperWins(d);
-    final losses = stats.getMinesweeperLosses(d);
+    final wins = await stats.getMinesweeperWins(d);
+    final losses = await stats.getMinesweeperLosses(d);
     if (wins > 0 || losses > 0) {
       hasAny = true;
       parts.add('${d.label} ${wins}W/${losses}L');
@@ -498,16 +497,35 @@ class _GameListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final record = _GameRecord.read(info);
-    final recordLabel = info.isMinesweeper
-        ? minesweeperRecordLabel()
-        : (record?.label ?? 'New game — pick a difficulty');
-    final recordColor = info.isMinesweeper
-        ? info.color
-        : (record == null || record.played == 0
-              ? colorScheme.onSurfaceVariant
-              : info.color);
+    return FutureBuilder<_GameRecord?>(
+      future: _GameRecord.read(info),
+      builder: (context, snapshot) {
+        final record = snapshot.data;
+        return FutureBuilder<String>(
+          future: info.isMinesweeper ? minesweeperRecordLabel() : null,
+          initialData: info.isMinesweeper ? null : '',
+          builder: (context, labelSnap) {
+            final recordLabel = info.isMinesweeper
+                ? (labelSnap.data ?? 'New game — pick a difficulty')
+                : (record?.label ?? 'New game — pick a difficulty');
+            final recordColor = info.isMinesweeper
+                ? info.color
+                : (record == null || record.played == 0
+                      ? colorScheme.onSurfaceVariant
+                      : info.color);
+            return _buildCard(context, colorScheme, recordLabel, recordColor);
+          },
+        );
+      },
+    );
+  }
 
+  Widget _buildCard(
+    BuildContext context,
+    ColorScheme colorScheme,
+    String recordLabel,
+    Color recordColor,
+  ) {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -567,17 +585,51 @@ class _GameListTile extends StatelessWidget {
   }
 }
 
-class _RecordSummary extends StatelessWidget {
+class _RecordSummary extends StatefulWidget {
   const _RecordSummary({required this.stats});
 
   final GameStats stats;
 
   @override
+  State<_RecordSummary> createState() => _RecordSummaryState();
+}
+
+class _RecordSummaryState extends State<_RecordSummary> {
+  int _wins = 0;
+  int _losses = 0;
+  int _draws = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecordSummary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.stats != widget.stats) _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final stats = widget.stats;
+    final w = await stats.getAllGamesWins();
+    final l = await stats.getAllGamesLosses();
+    final d = await stats.getAllGamesDraws();
+    if (!mounted) return;
+    setState(() {
+      _wins = w;
+      _losses = l;
+      _draws = d;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final wins = stats.getAllGamesWins();
-    final losses = stats.getAllGamesLosses();
-    final draws = stats.getAllGamesDraws();
+    final wins = _wins;
+    final losses = _losses;
+    final draws = _draws;
     final played = wins + losses + draws;
 
     return Container(
@@ -700,16 +752,35 @@ class _GameTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final record = _GameRecord.read(info);
-    final recordLabel = info.isMinesweeper
-        ? minesweeperRecordLabel()
-        : (record?.label ?? 'New game — pick a difficulty');
-    final recordColor = info.isMinesweeper
-        ? info.color
-        : (record == null || record.played == 0
-              ? colorScheme.onSurfaceVariant
-              : info.color);
+    return FutureBuilder<_GameRecord?>(
+      future: _GameRecord.read(info),
+      builder: (context, snap) {
+        final record = snap.data;
+        return FutureBuilder<String>(
+          future: info.isMinesweeper ? minesweeperRecordLabel() : null,
+          initialData: info.isMinesweeper ? null : '',
+          builder: (context, labelSnap) {
+            final recordLabel = info.isMinesweeper
+                ? (labelSnap.data ?? 'New game — pick a difficulty')
+                : (record?.label ?? 'New game — pick a difficulty');
+            final recordColor = info.isMinesweeper
+                ? info.color
+                : (record == null || record.played == 0
+                      ? colorScheme.onSurfaceVariant
+                      : info.color);
+            return _buildCard(context, colorScheme, recordLabel, recordColor);
+          },
+        );
+      },
+    );
+  }
 
+  Widget _buildCard(
+    BuildContext context,
+    ColorScheme colorScheme,
+    String recordLabel,
+    Color recordColor,
+  ) {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,

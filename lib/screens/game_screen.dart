@@ -10,7 +10,6 @@ import 'package:common_games/games/gomoku/gomoku_board.dart';
 import 'package:common_games/games/othello/othello_board.dart';
 import 'package:common_games/games/tictactoe/tictactoe_board.dart';
 import 'package:common_games/models/game_mode.dart';
-import 'package:common_games/screens/home_screen.dart';
 import 'package:common_games/services/game_stats.dart';
 
 class GameScreen extends StatefulWidget {

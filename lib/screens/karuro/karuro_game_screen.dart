@@ -223,7 +223,7 @@ class _KaruroGameScreenState extends State<KaruroGameScreen> {
       _wonShown = true;
       HapticService.onGameOver();
       // Record the win for the home-screen counter.
-      GameStats.instance.recordKaruroWin();
+      unawaited(GameStats.instance.recordKaruroWin());
       // Clear the save on completion so a fresh "new puzzle" starts
       // from a known-empty state. Awaited via [_clearSave] so the
       // remove is bound to a future the screen can't outrun.
