@@ -26,7 +26,8 @@ class KlondikeGameScreen extends StatefulWidget {
   State<KlondikeGameScreen> createState() => _KlondikeGameScreenState();
 }
 
-class _KlondikeGameScreenState extends State<KlondikeGameScreen> {
+class _KlondikeGameScreenState extends State<KlondikeGameScreen>
+    with WidgetsBindingObserver {
   KlondikeModel? _model;
   Timer? _clockTimer;
   Timer? _autoCompleteTimer;
@@ -43,14 +44,31 @@ class _KlondikeGameScreenState extends State<KlondikeGameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clockTimer?.cancel();
     _autoCompleteTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Freeze the move clock any time the app isn't foregrounded. The
+    // 1Hz [Timer.periodic] would otherwise keep ticking and inflate
+    // the elapsed timer while the user is in another app.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _clockTimer?.cancel();
+      unawaited(_saveNow());
+    } else if (state == AppLifecycleState.resumed) {
+      _startClock();
+    }
   }
 
   Future<void> _bootstrap() async {

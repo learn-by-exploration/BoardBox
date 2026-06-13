@@ -247,5 +247,38 @@ void main() {
       // Now the moves counter should be 1.
       expect(find.text('1'), findsWidgets);
     });
+
+    testWidgets('pausing the app cancels the klondike clock', (tester) async {
+      tester.view.physicalSize = const Size(414 * 3, 896 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const MaterialApp(home: KlondikeGameScreen()));
+      await tester.pumpAndSettle();
+      // The screen registers itself as a WidgetsBindingObserver, so the
+      // pause lifecycle event must freeze the 1Hz clock.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      // The 5s pump below would normally advance the clock by 5 ticks;
+      // because the clock is paused, the timer label must stay at 00:00.
+      await tester.pump(const Duration(seconds: 5));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('klondike_timer_pill')),
+          matching: find.text('00:00'),
+        ),
+        findsOneWidget,
+      );
+      // Resume and confirm the clock ticks again.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('klondike_timer_pill')),
+          matching: find.text('00:03'),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }
