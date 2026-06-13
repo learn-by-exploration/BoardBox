@@ -90,23 +90,17 @@ class _CheckersBoardState extends State<CheckersBoard> {
   void _playAiMove() {
     if (!mounted) return;
     final piecesWithMoves = <(int, int, List<List<int>>)>[];
-    final mustCapture = _checkMustCapture();
+    final mustCapture = _game.mustCapture;
 
     for (int r = 0; r < CheckersModel.size; r++) {
       for (int c = 0; c < CheckersModel.size; c++) {
         final piece = _game.board[r][c];
         if (piece == null) continue;
         if (piece != 'b' && piece != 'B') continue;
-        final didSelect = _game.tap(r, c);
-        if (!didSelect) {
-          continue; // tap failed (e.g. piece has no moves under mandatory-capture) — skip to avoid reading stale highlightedMoves
-        }
-        final moves = List<List<int>>.from(_game.highlightedMoves);
+        final moves = _game.enumerateMovesFor(r, c);
         if (moves.isNotEmpty) piecesWithMoves.add((r, c, moves));
       }
     }
-
-    _game.deselect(); // clear selection without risk of executing a move
 
     if (piecesWithMoves.isEmpty) {
       setState(() => _aiThinking = false);
@@ -197,38 +191,6 @@ class _CheckersBoardState extends State<CheckersBoard> {
         widget.onGameOver?.call('$winner wins!');
       });
     }
-  }
-
-  bool _checkMustCapture() {
-    for (int r = 0; r < CheckersModel.size; r++) {
-      for (int c = 0; c < CheckersModel.size; c++) {
-        final piece = _game.board[r][c];
-        if (piece == 'b' || piece == 'B') {
-          final isKing = piece == 'B';
-          final directions = isKing
-              ? [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-              : [(1, -1), (1, 1)];
-          for (final d in directions) {
-            final nr = r + d.$1;
-            final nc = c + d.$2;
-            if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) continue;
-            final mid = _game.board[nr][nc];
-            if (mid == 'r' || mid == 'R') {
-              final jr = nr + d.$1;
-              final jc = nc + d.$2;
-              if (jr >= 0 &&
-                  jc >= 0 &&
-                  jr < 8 &&
-                  jc < 8 &&
-                  _game.board[jr][jc] == null) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-    }
-    return false;
   }
 
   @override

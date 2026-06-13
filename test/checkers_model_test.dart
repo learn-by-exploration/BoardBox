@@ -99,5 +99,27 @@ void main() {
         throwsA(isA<FormatException>()),
       );
     });
+
+    test('enumerateMovesFor returns legal moves and does not mutate state', () {
+      // Red is to move. Tap on (5,0) selects it and highlights moves.
+      // enumerateMovesFor should return the same moves without touching
+      // selectedRow/Col or highlightedMoves on the model.
+      final moves = game.enumerateMovesFor(5, 0);
+      // From a fresh game, the (5,0) red man can move to (4,1).
+      expect(moves, isNotEmpty);
+      expect(
+        moves,
+        contains(predicate<List<int>>((m) => m[0] == 4 && m[1] == 1)),
+      );
+      // State must be untouched.
+      expect(game.selectedRow, isNull);
+      expect(game.selectedCol, isNull);
+      expect(game.highlightedMoves, isEmpty);
+    });
+
+    test('enumerateMovesFor returns empty for opponent pieces', () {
+      // Black piece at (2,1) — not red's piece, so no legal moves.
+      expect(game.enumerateMovesFor(2, 1), isEmpty);
+    });
   });
 }

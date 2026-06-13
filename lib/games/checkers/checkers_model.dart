@@ -152,16 +152,11 @@ class CheckersModel {
 
     // Tap on own piece → select it
     if (_isOwnPiece(row, col)) {
-      final mustCapture = _mustCaptureExists();
-      final moves = _getMovesForPiece(row, col);
-      // If must capture, filter to captures only
-      final filteredMoves = mustCapture
-          ? moves.where((m) => (m[0] - row).abs() == 2).toList()
-          : moves;
+      final filteredMoves = enumerateMovesFor(row, col);
       if (filteredMoves.isEmpty) return false;
       selectedRow = row;
       selectedCol = col;
-      _highlightedMoves = filteredMoves;
+      _highlightedMoves = List.of(filteredMoves);
       return true;
     }
 
@@ -259,6 +254,24 @@ class CheckersModel {
     selectedCol = null;
     _highlightedMoves = [];
   }
+
+  /// Returns the legal moves for the piece at ([row], [col]) under the
+  /// current rules, **without mutating** [selectedRow], [selectedCol], or
+  /// [highlightedMoves]. Filters to captures only when a capture is
+  /// mandatory. Safe for AI move enumeration that probes many pieces.
+  List<List<int>> enumerateMovesFor(int row, int col) {
+    if (!_isOwnPiece(row, col)) return const [];
+    final mustCapture = _mustCaptureExists();
+    final moves = _getMovesForPiece(row, col);
+    final filtered = mustCapture
+        ? moves.where((m) => (m[0] - row).abs() == 2).toList()
+        : moves;
+    return List.unmodifiable(filtered);
+  }
+
+  /// True when the current player has at least one capture available.
+  /// Public so the AI harness can stop duplicating the must-capture check.
+  bool get mustCapture => _mustCaptureExists();
 
   bool _isOwnPiece(int r, int c) {
     final piece = _board[r][c];
