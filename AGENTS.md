@@ -4,8 +4,9 @@
 **Flutter:** 3.44.0 stable (CI-pinned) · **Dart:** `^3.12.0` · **JVM:** 17
 
 A Flutter app with local-multiplayer board games. Currently shipping: Gomoku,
-Othello, Checkers, Dots & Boxes, Tic Tac Toe, Sudoku, Karuro, Klondike. New games follow
-the two-file pattern described in [§ Project structure](#project-structure).
+Othello, Checkers, Dots & Boxes, Tic Tac Toe, Sudoku, Karuro, Klondike,
+Minesweeper. New games follow the two-file pattern described in
+[§ Project structure](#project-structure).
 
 This file is the **portable baseline** for any coding agent (Claude Code, Codex,
 Aider, Gemini CLI, Cursor, etc.). Tool-specific extensions belong in
@@ -52,8 +53,10 @@ lib/
     sudoku/                # sudoku_setup_screen + sudoku_game_screen
     karuro/                # karuro_setup_screen + karuro_game_screen
     klondike/              # klondike_setup_screen + klondike_game_screen
+    minesweeper/           # minesweeper_setup_screen + minesweeper_game_screen
   games/<name>/            # <name>_model.dart (pure Dart) + <name>_board.dart
   games/cards/             # shared PlayingCard, Deck, CardView (Klondike v1 consumer)
+  games/minesweeper/       # minesweeper_model (pure Dart) + minesweeper_board + MinesweeperDifficulty enum
   services/                # game_stats, settings_service, haptic_service
   widgets/                 # shared UI
   theme/                   # Material 3, seed 0xFF5C35CC
@@ -121,6 +124,7 @@ behavior. Failing these silently ships a broken game.
 | **Sudoku** | 9×9 grid; uses `fludoku: 4.0.5` for puzzle generation/validation; save format is versioned (`version: 2`); mistake limit and timer live on the model. |
 | **Karuro** | Hybrid Kakuro/crossword. Numeric runs: digits 1-9, no repeats within a run, sum equals the clue. Word runs: letters A-Z, spells the `answer` from `entries`. The per-cell `solution` map in the puzzle JSON is the source of truth for "show errors" — no runtime solver. |
 | **Klondike** | 7 tableau columns, 4 foundations, 24-card stock, draw-1 only. Standard Klondike turn-1 deal: after `deal()`, every column has exactly one face-up card at the top (column 1 included). Win = all four foundations built to King by suit. Hint, auto-complete, undo, timer, and move counter are part of the model layer (not screen-side). |
+| **Minesweeper** | Beginner 9×9 / 10 mines, Intermediate 16×16 / 40 mines, Expert 16×30 / 99 mines. First-tap safety: the minefield is generated on the first reveal, and the tapped cell plus its 8 neighbors are guaranteed mine-free. Cascade reveal: revealing a cell with 0 adjacent mines reveals all 8 neighbors and recursively reveals any of those with 0. Win = all safe cells revealed. Loss = a mine revealed. No chord-reveal, no undo in v1. |
 
 ---
 
