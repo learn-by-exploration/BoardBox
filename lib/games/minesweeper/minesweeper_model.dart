@@ -66,7 +66,6 @@ final class MinesweeperLost extends MinesweeperState {
   const MinesweeperLost({this.triggeredAt});
 
   const MinesweeperLost.triggered(this.triggeredAt);
-  const MinesweeperLost.unknown() : triggeredAt = null;
 }
 
 /// A single cell on the board. `isMine` is meaningful only after
@@ -420,7 +419,7 @@ class MinesweeperModel {
     final stateName = json['state'] as String? ?? 'playing';
     model._state = switch (stateName) {
       'won' => const MinesweeperWon(),
-      'lost' => const MinesweeperLost.unknown(),
+      'lost' => const MinesweeperLost(),
       _ => const MinesweeperPlaying(),
     };
     return model;

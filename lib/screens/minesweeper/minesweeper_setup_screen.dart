@@ -93,10 +93,7 @@ class _DifficultyCard extends StatelessWidget {
                 onPressed: () => _open(context),
                 style: FilledButton.styleFrom(
                   backgroundColor: color,
-                  foregroundColor:
-                      color.withValues(alpha: 1) == const Color(0xFFC62828)
-                      ? Colors.white
-                      : Colors.white,
+                  foregroundColor: Colors.white,
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: Text('Play ${difficulty.label}'),
