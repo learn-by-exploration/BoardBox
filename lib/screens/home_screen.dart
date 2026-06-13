@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:common_games/games/minesweeper/minesweeper_model.dart';
 import 'package:common_games/screens/karuro/karuro_setup_screen.dart';
 import 'package:common_games/screens/klondike/klondike_setup_screen.dart';
+import 'package:common_games/screens/minesweeper/minesweeper_setup_screen.dart';
 import 'package:common_games/screens/mode_select_screen.dart';
 import 'package:common_games/screens/settings_screen.dart';
 import 'package:common_games/screens/sudoku/sudoku_setup_screen.dart';
@@ -19,7 +21,7 @@ class _GameInfo {
 
   /// Custom route key. When set, the game opens via its own setup
   /// screen rather than the shared [ModeSelectScreen] / Sudoku flow.
-  /// Currently: 'sudoku', 'karuro', 'klondike'.
+  /// Currently: 'sudoku', 'karuro', 'klondike', 'minesweeper'.
   final String? customRoute;
 
   const _GameInfo({
@@ -40,6 +42,10 @@ class _GameInfo {
 
   /// Klondike has its own setup screen (always draw-1 in v1).
   bool get isKlondike => customRoute == 'klondike';
+
+  /// Minesweeper has its own setup screen with three classic
+  /// difficulty presets.
+  bool get isMinesweeper => customRoute == 'minesweeper';
 }
 
 const _games = [
@@ -121,6 +127,18 @@ const _games = [
         'Build the four suit foundations from Ace to King. '
         'Draw-1, unlimited redeals, with hint and auto-complete.',
   ),
+  _GameInfo(
+    title: 'Minesweeper',
+    subtitle: 'Sweep the Board',
+    icon: Icons.warning_amber_rounded,
+    color: Color(0xFF455A64),
+    // Minesweeper has its own setup screen with three difficulty presets.
+    gameType: null,
+    customRoute: 'minesweeper',
+    description:
+        'Sweep mines, flag the rest. Three classic difficulty presets '
+        'from 9×9 beginner to 30×16 expert.',
+  ),
 ];
 
 class HomeScreen extends StatefulWidget {
@@ -186,6 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await Navigator.push<void>(
         context,
         MaterialPageRoute<void>(builder: (_) => const KlondikeSetupScreen()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+    if (info.isMinesweeper) {
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const MinesweeperSetupScreen()),
       );
       if (mounted) setState(() {});
       return;
@@ -414,6 +440,22 @@ class _GameRecord {
       final wins = GameStats.instance.getKlondikeWins();
       return _GameRecord(wins: wins, draws: 0, losses: 0);
     }
+    if (info.isMinesweeper) {
+      // The Minesweeper record is rendered as a per-difficulty
+      // breakdown ("Beginner 3W/1L · Intermediate 1W/2L · Expert 0W/1L")
+      // — a different shape than the (wins, draws, losses) tuple. We
+      // collapse it into the _GameRecord by summing across all three
+      // difficulties; the tile reads the breakdown from
+      // [minesweeperRecordLabel] below.
+      final stats = GameStats.instance;
+      var wins = 0;
+      var losses = 0;
+      for (final d in MinesweeperDifficulty.values) {
+        wins += stats.getMinesweeperWins(d);
+        losses += stats.getMinesweeperLosses(d);
+      }
+      return _GameRecord(wins: wins, draws: 0, losses: losses);
+    }
     final gameType = info.gameType;
     if (gameType == null) return null;
     final stats = GameStats.instance;
@@ -423,6 +465,28 @@ class _GameRecord {
       losses: stats.getTotalLosses(gameType),
     );
   }
+}
+
+/// Per-difficulty record label for Minesweeper. Returns
+/// `'Beginner 3W/1L  ·  Intermediate 1W/2L  ·  Expert 0W/1L'` when
+/// the player has played at least one game; otherwise
+/// `'New game — pick a difficulty'`. This lives next to [_GameRecord]
+/// because Minesweeper's stat shape doesn't fit the
+/// (wins, draws, losses) tuple the other games use.
+String minesweeperRecordLabel() {
+  final stats = GameStats.instance;
+  final parts = <String>[];
+  var hasAny = false;
+  for (final d in MinesweeperDifficulty.values) {
+    final wins = stats.getMinesweeperWins(d);
+    final losses = stats.getMinesweeperLosses(d);
+    if (wins > 0 || losses > 0) {
+      hasAny = true;
+      parts.add('${d.label} ${wins}W/${losses}L');
+    }
+  }
+  if (!hasAny) return 'New game — pick a difficulty';
+  return parts.join('  ·  ');
 }
 
 class _GameListTile extends StatelessWidget {
@@ -435,6 +499,14 @@ class _GameListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final record = _GameRecord.read(info);
+    final recordLabel = info.isMinesweeper
+        ? minesweeperRecordLabel()
+        : (record?.label ?? 'New game — pick a difficulty');
+    final recordColor = info.isMinesweeper
+        ? info.color
+        : (record == null || record.played == 0
+              ? colorScheme.onSurfaceVariant
+              : info.color);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -476,11 +548,9 @@ class _GameListTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      record?.label ?? 'New game — pick a difficulty',
+                      recordLabel,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: record == null || record.played == 0
-                            ? colorScheme.onSurfaceVariant
-                            : info.color,
+                        color: recordColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -631,6 +701,14 @@ class _GameTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final record = _GameRecord.read(info);
+    final recordLabel = info.isMinesweeper
+        ? minesweeperRecordLabel()
+        : (record?.label ?? 'New game — pick a difficulty');
+    final recordColor = info.isMinesweeper
+        ? info.color
+        : (record == null || record.played == 0
+              ? colorScheme.onSurfaceVariant
+              : info.color);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -722,11 +800,9 @@ class _GameTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  record?.label ?? 'New game — pick a difficulty',
+                  recordLabel,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: record == null || record.played == 0
-                        ? colorScheme.onSurfaceVariant
-                        : info.color,
+                    color: recordColor,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,

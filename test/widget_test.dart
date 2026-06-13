@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:common_games/games/dots_and_boxes/dots_board.dart';
 import 'package:common_games/games/gomoku/gomoku_board.dart';
+import 'package:common_games/games/minesweeper/minesweeper_model.dart';
 import 'package:common_games/games/tictactoe/tictactoe_board.dart';
 import 'package:common_games/main.dart';
 import 'package:common_games/models/game_mode.dart';
@@ -175,5 +176,42 @@ void main() {
 
     expect(find.text('Sudoku'), findsOneWidget);
     expect(find.text('Number Logic'), findsOneWidget);
+  });
+
+  testWidgets('Home catalog includes the Minesweeper tile', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+
+    // Minesweeper is the last tile in the 2-column grid; scroll down
+    // to find it on the default 800×600 test surface.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await tester.pumpAndSettle();
+    expect(find.text('Minesweeper'), findsOneWidget);
+    expect(find.text('Sweep the Board'), findsOneWidget);
+    // No games played yet — the tile should show the empty-state label.
+    expect(find.text('New game — pick a difficulty'), findsWidgets);
+  });
+
+  testWidgets('Minesweeper tile shows per-difficulty record after a win', (
+    tester,
+  ) async {
+    await GameStats.instance.recordMinesweeperWin(
+      MinesweeperDifficulty.beginner,
+    );
+    await GameStats.instance.recordMinesweeperWin(
+      MinesweeperDifficulty.beginner,
+    );
+    await GameStats.instance.recordMinesweeperLoss(
+      MinesweeperDifficulty.expert,
+    );
+    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+
+    // Scroll down to bring the Minesweeper tile into view.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await tester.pumpAndSettle();
+
+    // Beginner 2W/0L and Expert 0W/1L — Intermediate is empty and
+    // dropped from the summary.
+    expect(find.textContaining('Beginner 2W/0L'), findsOneWidget);
+    expect(find.textContaining('Expert 0W/1L'), findsOneWidget);
   });
 }
