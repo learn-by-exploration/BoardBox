@@ -261,6 +261,56 @@ void main() {
       }
       expect(m.state, isA<MinesweeperWon>());
     });
+
+    test('cascade reveal of a 0-region flips state to Won in a single tap', () {
+      // Build a beginner 9×9 minefield with 10 mines clustered in the
+      // bottom-right corner. A cascade from the top-left corner (0,0)
+      // should reach every safe cell in one tap, exercising the
+      // cascade → _checkWin → Won path that the manual-reveal test
+      // above does not cover. Mine positions are hand-picked so the
+      // safe zone and the cascade region are disjoint.
+      final cells = <List<Map<String, bool>>>[
+        for (var r = 0; r < 9; r++)
+          [
+            for (var c = 0; c < 9; c++)
+              {'mine': false, 'revealed': false, 'flagged': false},
+          ],
+      ];
+      const minePositions = <List<int>>[
+        [6, 6],
+        [6, 7],
+        [6, 8],
+        [7, 6],
+        [7, 7],
+        [7, 8],
+        [8, 5],
+        [8, 6],
+        [8, 7],
+        [8, 8],
+      ];
+      for (final p in minePositions) {
+        cells[p[0]][p[1]] = {'mine': true, 'revealed': false, 'flagged': false};
+      }
+      final m = MinesweeperModel.fromJson(<String, dynamic>{
+        'version': 1,
+        'difficulty': 'beginner',
+        'seed': 0,
+        'elapsedSeconds': 0,
+        'minesPlaced': true,
+        'cells': cells,
+        'state': 'playing',
+      });
+      m.reveal(0, 0);
+      expect(m.state, isA<MinesweeperWon>());
+      // No mine should have been revealed as part of the cascade.
+      for (final p in minePositions) {
+        expect(
+          m.cellAt(p[0], p[1]).revealed,
+          isFalse,
+          reason: 'mine at (${p[0]}, ${p[1]}) must stay hidden on a win',
+        );
+      }
+    });
   });
 
   group('MinesweeperModel — restart', () {
