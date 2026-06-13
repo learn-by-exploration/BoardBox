@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:common_games/games/minesweeper/minesweeper_model.dart';
 import 'package:common_games/models/game_mode.dart';
 import 'package:common_games/screens/home_screen.dart';
 
@@ -94,5 +95,37 @@ class GameStats {
 
   Future<void> recordKlondikeWin() async {
     await _prefs?.setInt(_klondikeWinsKey, getKlondikeWins() + 1);
+  }
+
+  // ─── Minesweeper (single-player puzzle, per-difficulty) ───────────────
+  // Minesweeper has no AI opponent but does have three classic
+  // difficulty presets. Each gets its own wins/losses pair so the home
+  // tile and setup screen can break down record per board size.
+  // Keys follow the `<game>_<difficulty>_<stat>` shape used by the
+  // AI-difficulty methods above.
+
+  static String _minesweeperWinsKey(MinesweeperDifficulty d) =>
+      'minesweeper_${d.name}_wins';
+
+  static String _minesweeperLossesKey(MinesweeperDifficulty d) =>
+      'minesweeper_${d.name}_losses';
+
+  int getMinesweeperWins(MinesweeperDifficulty d) =>
+      _prefs?.getInt(_minesweeperWinsKey(d)) ?? 0;
+
+  int getMinesweeperLosses(MinesweeperDifficulty d) =>
+      _prefs?.getInt(_minesweeperLossesKey(d)) ?? 0;
+
+  int getMinesweeperPlayed(MinesweeperDifficulty d) =>
+      getMinesweeperWins(d) + getMinesweeperLosses(d);
+
+  Future<void> recordMinesweeperWin(MinesweeperDifficulty d) async {
+    final key = _minesweeperWinsKey(d);
+    await _prefs?.setInt(key, getMinesweeperWins(d) + 1);
+  }
+
+  Future<void> recordMinesweeperLoss(MinesweeperDifficulty d) async {
+    final key = _minesweeperLossesKey(d);
+    await _prefs?.setInt(key, getMinesweeperLosses(d) + 1);
   }
 }

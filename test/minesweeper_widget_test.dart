@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:common_games/games/minesweeper/minesweeper_board.dart';
 import 'package:common_games/games/minesweeper/minesweeper_model.dart';
+import 'package:common_games/screens/minesweeper/minesweeper_setup_screen.dart';
+import 'package:common_games/services/game_stats.dart';
 
 void main() {
   group('MinesweeperBoard', () {
@@ -172,6 +175,63 @@ void main() {
       await tester.tap(firstCell);
       await tester.pump();
       expect(callCount, 1);
+    });
+  });
+
+  group('MinesweeperSetupScreen', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await GameStats.instance.init();
+    });
+
+    testWidgets('renders three difficulty cards with play buttons', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: MinesweeperSetupScreen()),
+      );
+      expect(find.text('Beginner'), findsOneWidget);
+      expect(find.text('Intermediate'), findsOneWidget);
+      expect(find.text('Expert'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('minesweeper_new_game_beginner')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('minesweeper_new_game_intermediate')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('minesweeper_new_game_expert')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows the empty-state prompt when no games have been played', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: MinesweeperSetupScreen()),
+      );
+      expect(
+        find.text('Pick a difficulty to start your first game.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows the per-difficulty record after a win', (tester) async {
+      await GameStats.instance.recordMinesweeperWin(
+        MinesweeperDifficulty.beginner,
+      );
+      await GameStats.instance.recordMinesweeperLoss(
+        MinesweeperDifficulty.intermediate,
+      );
+      await tester.pumpWidget(
+        const MaterialApp(home: MinesweeperSetupScreen()),
+      );
+      // The summary line mentions the beginner and intermediate counts.
+      expect(find.textContaining('Beginner 1W/0L'), findsOneWidget);
+      expect(find.textContaining('Intermediate 0W/1L'), findsOneWidget);
     });
   });
 }
