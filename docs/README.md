@@ -50,8 +50,10 @@ run a bug hunt, the per-PR code review checklist, and the secrets policy.
 | File | Read this when… |
 |---|---|
 | [`flutter-dart-style.md`](engineering/flutter-dart-style.md) | You want the rationale behind each of the 18 lints, or the type-system / null-safety / async / collections / classes / error-handling rules. |
+| [`coding-guidelines.md`](engineering/coding-guidelines.md) | You're writing Dart/Flutter and want a day-to-day style guide (naming, file org, imports, comments, constants). The type-specific rules (models, services, widgets, errors, tests, Dart 3) are in [`coding-guidelines-types.md`](engineering/coding-guidelines-types.md). |
 | [`testing-strategy.md`](engineering/testing-strategy.md) | You're writing tests, debugging a flaky test, or designing the test pyramid for a new subsystem. |
 | [`ci-cd.md`](engineering/ci-cd.md) | You want the local 3-gate + the CI pipeline in `.github/workflows/ci.yml` explained job-by-job. |
+| [`v-model.md`](engineering/v-model.md) | You want the full development lifecycle framed as a V-Model: requirements → design → code → test → verify → operate, with traceability and V-phase gates. |
 | [`bug-hunt-process.md`](engineering/bug-hunt-process.md) | You're auditing a working app for defects. The 6-lens review, severity ladder, repro template, triage flow. |
 | [`code-review-checklist.md`](engineering/code-review-checklist.md) | You want the per-PR reviewer's checklist (code-quality focus; bridges `design/07-pr-review-checklist.md`). |
 | [`secrets-and-privacy.md`](engineering/secrets-and-privacy.md) | You need to handle a secret, set up a new one, or respond to a leak. |
