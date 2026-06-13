@@ -45,6 +45,11 @@ class TicTacToeModel {
   List<UnmodifiableListView<TicTacToePlayer?>> get board =>
       _board.map(UnmodifiableListView<TicTacToePlayer?>.new).toList();
 
+  /// Internal scratch accessor for the AI harness, which mutates cells
+  /// and reverts them to reason about hypothetical moves. Do not call
+  /// from UI code — use the read-only [board] getter instead.
+  List<List<TicTacToePlayer?>> get scratchBoard => _board;
+
   List<(int, int)> get emptyCells {
     final cells = <(int, int)>[];
     for (int r = 0; r < size; r++) {
@@ -84,7 +89,20 @@ class TicTacToeModel {
     return true;
   }
 
-  bool _checkWin(int row, int col, TicTacToePlayer player) {
+  /// Returns true if [player] would have a winning line at ([row], [col])
+  /// *if* a piece of theirs were placed there. Does not mutate the board —
+  /// safe for AI move enumeration that probes many cells in a row.
+  bool wouldWinAt(int row, int col, TicTacToePlayer player) {
+    if (row < 0 || row >= size || col < 0 || col >= size) return false;
+    return _lineAt(row, col, player);
+  }
+
+  bool _checkWin(int row, int col, TicTacToePlayer player) =>
+      _lineAt(row, col, player);
+
+  /// Scan the four directions through ([row], [col]) for [player] pieces.
+  /// Returns true if any direction has [winLength] or more pieces.
+  bool _lineAt(int row, int col, TicTacToePlayer player) {
     const dirs = [(0, 1), (1, 0), (1, 1), (1, -1)];
     for (final d in dirs) {
       int count = 1;

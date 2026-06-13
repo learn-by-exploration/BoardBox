@@ -137,7 +137,10 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
 
   void _playAiMove() {
     if (!mounted) return;
-    final board = _game.board.map(List<TicTacToePlayer?>.from).toList();
+    // Use the model's internal scratch list for AI reasoning. The AI
+    // harness mutates-and-reverts cells in this list; never expose it
+    // to the UI (which reads through the unmodifiable [board] getter).
+    final board = _game.scratchBoard;
     final empty = _game.emptyCells;
     if (empty.isEmpty) return;
 
@@ -183,37 +186,21 @@ class _TicTacToeBoardState extends State<TicTacToeBoard> {
   }
 
   /// Wins immediately if possible, else blocks opponent's immediate win, else random.
+  /// Uses the model's non-mutating [wouldWinAt] probe for the win/block
+  /// checks — no per-cell board clones needed.
   (int, int) _smartMove(
     List<List<TicTacToePlayer?>> board,
     List<(int, int)> empty,
   ) {
     // Try to win
     for (final cell in empty) {
-      final tempBoard = board.map(List<TicTacToePlayer?>.from).toList();
-      tempBoard[cell.$1][cell.$2] = TicTacToePlayer.o;
-      if (_wouldWin(
-        tempBoard,
-        cell.$1,
-        cell.$2,
-        TicTacToePlayer.o,
-        widget.boardSize,
-        _game.winLength,
-      )) {
+      if (_game.wouldWinAt(cell.$1, cell.$2, TicTacToePlayer.o)) {
         return cell;
       }
     }
     // Try to block
     for (final cell in empty) {
-      final tempBoard = board.map(List<TicTacToePlayer?>.from).toList();
-      tempBoard[cell.$1][cell.$2] = TicTacToePlayer.x;
-      if (_wouldWin(
-        tempBoard,
-        cell.$1,
-        cell.$2,
-        TicTacToePlayer.x,
-        widget.boardSize,
-        _game.winLength,
-      )) {
+      if (_game.wouldWinAt(cell.$1, cell.$2, TicTacToePlayer.x)) {
         return cell;
       }
     }

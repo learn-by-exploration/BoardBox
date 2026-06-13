@@ -142,4 +142,52 @@ void main() {
       expect(restored.board[0][1], TicTacToePlayer.x);
     });
   });
+
+  group('TicTacToeModel — wouldWinAt probe', () {
+    test('returns true when placing a piece would complete a line', () {
+      final m = TicTacToeModel(size: 3);
+      m.play(0, 0); // X
+      m.play(1, 0); // O
+      m.play(0, 1); // X — about to win on row 0
+      expect(m.wouldWinAt(0, 2, TicTacToePlayer.x), isTrue);
+      expect(m.wouldWinAt(0, 2, TicTacToePlayer.o), isFalse);
+    });
+
+    test('returns false when the cell is already occupied', () {
+      final m = TicTacToeModel(size: 3);
+      m.play(0, 0); // X
+      // A probe on the occupied cell must not crash; it just observes
+      // the line at (0,0), which has length 1 — below winLength=3.
+      expect(m.wouldWinAt(0, 0, TicTacToePlayer.x), isFalse);
+    });
+
+    test('returns false for out-of-bounds probes', () {
+      final m = TicTacToeModel(size: 3);
+      expect(m.wouldWinAt(-1, 0, TicTacToePlayer.x), isFalse);
+      expect(m.wouldWinAt(0, 99, TicTacToePlayer.x), isFalse);
+    });
+
+    test('does not mutate the board', () {
+      final m = TicTacToeModel(size: 3);
+      m.play(0, 0);
+      m.play(1, 1);
+      final snapshot = m.scratchBoard.map(List<TicTacToePlayer?>.of).toList();
+      // Probe every empty cell for both players.
+      for (var r = 0; r < 3; r++) {
+        for (var c = 0; c < 3; c++) {
+          m.wouldWinAt(r, c, TicTacToePlayer.x);
+          m.wouldWinAt(r, c, TicTacToePlayer.o);
+        }
+      }
+      for (var r = 0; r < 3; r++) {
+        for (var c = 0; c < 3; c++) {
+          expect(
+            m.scratchBoard[r][c],
+            snapshot[r][c],
+            reason: 'cell ($r, $c) mutated by wouldWinAt',
+          );
+        }
+      }
+    });
+  });
 }
