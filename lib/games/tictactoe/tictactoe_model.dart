@@ -1,5 +1,4 @@
 import 'dart:collection';
-import 'dart:math' as math;
 
 import 'package:common_games/models/json_helpers.dart';
 
@@ -130,61 +129,6 @@ class TicTacToeModel {
       if (count >= winLength) return true;
     }
     return false;
-  }
-
-  /// Heuristic evaluation: positive = good for [forPlayer].
-  /// Line-scan: each unblocked line scores 10^(pieces_in_line).
-  int evaluate(TicTacToePlayer forPlayer) {
-    final s = state;
-    if (s is TicTacToeWin) {
-      return s.winner == forPlayer ? 1000000 : -1000000;
-    }
-    if (s is TicTacToeDraw) return 0;
-
-    final opponent = forPlayer == TicTacToePlayer.x
-        ? TicTacToePlayer.o
-        : TicTacToePlayer.x;
-    int score = 0;
-
-    for (final line in _allLinesOfWinLength()) {
-      int mine = 0, theirs = 0;
-      for (final cell in line) {
-        final v = _board[cell.$1][cell.$2];
-        if (v == forPlayer) {
-          mine++;
-        } else if (v == opponent) {
-          theirs++;
-        }
-      }
-      if (mine > 0 && theirs == 0) score += math.pow(10, mine).toInt();
-      if (theirs > 0 && mine == 0) score -= math.pow(10, theirs).toInt();
-    }
-    return score;
-  }
-
-  List<List<(int, int)>> _allLinesOfWinLength() {
-    final lines = <List<(int, int)>>[];
-    for (int r = 0; r < size; r++) {
-      for (int c = 0; c <= size - winLength; c++) {
-        lines.add(List.generate(winLength, (i) => (r, c + i)));
-      }
-    }
-    for (int c = 0; c < size; c++) {
-      for (int r = 0; r <= size - winLength; r++) {
-        lines.add(List.generate(winLength, (i) => (r + i, c)));
-      }
-    }
-    for (int r = 0; r <= size - winLength; r++) {
-      for (int c = 0; c <= size - winLength; c++) {
-        lines.add(List.generate(winLength, (i) => (r + i, c + i)));
-      }
-    }
-    for (int r = 0; r <= size - winLength; r++) {
-      for (int c = winLength - 1; c < size; c++) {
-        lines.add(List.generate(winLength, (i) => (r + i, c - i)));
-      }
-    }
-    return lines;
   }
 
   // ── Serialisation ─────────────────────────────────────────────────────────
