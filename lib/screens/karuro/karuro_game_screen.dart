@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -87,6 +88,14 @@ class _KaruroGameScreenState extends State<KaruroGameScreen> {
   }
 
   String get _saveKey => KaruroGameScreen.saveKey(widget.puzzle.id);
+
+  /// Clear the persisted Karuro save. Awaited so the in-flight
+  /// `prefs.remove` cannot lose to a subsequent `_saveNow()` triggered
+  /// by the new puzzle starting in `_onReset`.
+  Future<void> _clearSave() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_saveKey);
+  }
 
   Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
@@ -179,9 +188,7 @@ class _KaruroGameScreenState extends State<KaruroGameScreen> {
     setState(() {
       _selectedIndex = null;
     });
-    SharedPreferences.getInstance().then((prefs) async {
-      await prefs.remove(_saveKey);
-    });
+    unawaited(_clearSave());
     _startNewModel();
   }
 
@@ -218,10 +225,9 @@ class _KaruroGameScreenState extends State<KaruroGameScreen> {
       // Record the win for the home-screen counter.
       GameStats.instance.recordKaruroWin();
       // Clear the save on completion so a fresh "new puzzle" starts
-      // from a known-empty state.
-      SharedPreferences.getInstance().then((prefs) async {
-        await prefs.remove(_saveKey);
-      });
+      // from a known-empty state. Awaited via [_clearSave] so the
+      // remove is bound to a future the screen can't outrun.
+      unawaited(_clearSave());
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _showWinDialog();

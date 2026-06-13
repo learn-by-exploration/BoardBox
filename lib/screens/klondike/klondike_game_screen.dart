@@ -107,11 +107,17 @@ class _KlondikeGameScreenState extends State<KlondikeGameScreen>
     _saveNow();
   }
 
+  /// Clear the persisted Klondike save. Awaited so the in-flight
+  /// `prefs.remove` cannot lose to a subsequent `_saveNow()` triggered
+  /// by the new game starting in `_onNewGame`.
+  Future<void> _clearSave() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(KlondikeGameScreen.saveKey);
+  }
+
   void _onNewGame() {
     HapticService.onSelect();
-    SharedPreferences.getInstance().then((prefs) async {
-      await prefs.remove(KlondikeGameScreen.saveKey);
-    });
+    unawaited(_clearSave());
     _autoCompleteTimer?.cancel();
     _autoCompleteTimer = null;
     setState(() {
@@ -189,9 +195,7 @@ class _KlondikeGameScreenState extends State<KlondikeGameScreen>
       _wonShown = true;
       HapticService.onGameOver();
       GameStats.instance.recordKlondikeWin();
-      SharedPreferences.getInstance().then((prefs) async {
-        await prefs.remove(KlondikeGameScreen.saveKey);
-      });
+      unawaited(_clearSave());
       _stopAutoComplete();
       _clockTimer?.cancel();
       WidgetsBinding.instance.addPostFrameCallback((_) {

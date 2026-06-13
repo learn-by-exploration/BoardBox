@@ -342,6 +342,23 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     await prefs.setString(widget.saveKey, jsonEncode(model.toJson()));
   }
 
+  /// Clear the persisted Sudoku save. Awaited so the in-flight
+  /// `prefs.remove` cannot lose to a subsequent `_saveNow()` triggered
+  /// by the new puzzle starting in `_restart`.
+  Future<void> _clearSave() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(widget.saveKey);
+  }
+
+  /// Persist the final state, then clear the save key. Used by the
+  /// completion/loss dialog paths so the user can't background the app
+  /// between a stale write and the remove and see a "completed" puzzle
+  /// restored on next launch.
+  Future<void> _saveAndClear() async {
+    await _saveNow();
+    await _clearSave();
+  }
+
   void _restart() {
     final model = _model;
     if (model == null) return;
@@ -355,9 +372,7 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     _autosaveDebounce?.cancel();
     _gameOverShown = false;
     _gameLostShown = false;
-    SharedPreferences.getInstance().then((prefs) async {
-      await prefs.remove(widget.saveKey);
-    });
+    unawaited(_clearSave());
     _generatePuzzle();
   }
 
@@ -368,12 +383,12 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
       _gameOverShown = true;
       HapticService.onGameOver();
       _autosaveDebounce?.cancel();
-      _saveNow().then((_) async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(widget.saveKey);
-        if (!mounted) return;
-        _showCompletionDialog();
-      });
+      unawaited(
+        _saveAndClear().then((_) {
+          if (!mounted) return;
+          _showCompletionDialog();
+        }),
+      );
     }
   }
 
@@ -387,12 +402,12 @@ class _SudokuGameScreenState extends State<SudokuGameScreen>
     _gameLostShown = true;
     HapticService.onGameOver();
     _autosaveDebounce?.cancel();
-    _saveNow().then((_) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(widget.saveKey);
-      if (!mounted) return;
-      _showLossDialog();
-    });
+    unawaited(
+      _saveAndClear().then((_) {
+        if (!mounted) return;
+        _showLossDialog();
+      }),
+    );
   }
 
   void _showLossDialog() {
