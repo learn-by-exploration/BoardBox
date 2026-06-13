@@ -31,7 +31,8 @@ class MinesweeperGameScreen extends StatefulWidget {
   State<MinesweeperGameScreen> createState() => _MinesweeperGameScreenState();
 }
 
-class _MinesweeperGameScreenState extends State<MinesweeperGameScreen> {
+class _MinesweeperGameScreenState extends State<MinesweeperGameScreen>
+    with WidgetsBindingObserver {
   MinesweeperModel? _model;
   Timer? _clockTimer;
   bool _outcomeShown = false;
@@ -41,13 +42,30 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clockTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Freeze the clock any time the app isn't foregrounded. The 1Hz
+    // [Timer.periodic] would otherwise keep ticking and inflate the
+    // elapsed timer while the user is in another app.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _clockTimer?.cancel();
+      unawaited(_saveNow());
+    } else if (state == AppLifecycleState.resumed) {
+      _startClock();
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -90,11 +108,13 @@ class _MinesweeperGameScreenState extends State<MinesweeperGameScreen> {
     _saveNow();
   }
 
-  void _onReset() {
+  Future<void> _onReset() async {
     HapticService.onSelect();
-    SharedPreferences.getInstance().then((prefs) async {
-      await prefs.remove(_saveKey);
-    });
+    // Await the save removal before re-dealing. Without this, the
+    // fire-and-forget `prefs.remove` can resolve *after* `_startNewModel`
+    // writes a fresh save, wiping the new deal.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_saveKey);
     _startNewModel();
   }
 
